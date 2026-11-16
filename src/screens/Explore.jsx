@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Search, MapPin, ChevronDown, SlidersHorizontal, Map as MapIcon, List, X, SearchX, MapPinOff, Info, ArrowUpDown, Sparkles } from 'lucide-react'
-import { useApp, Chip, ProductCard, BizCard, EventCard, Sheet, Empty, Note, CatIcon, CheckRow, inr } from '../ui.jsx'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Search, MapPin, ChevronDown, ChevronRight, SlidersHorizontal, Map as MapIcon, List, X, SearchX, MapPinOff, Info, ArrowUpDown, Sparkles, Plus, Minus, LocateFixed } from 'lucide-react'
+import { useApp, Img, Chip, ProductCard, BizCard, EventCard, Sheet, Empty, Note, CatIcon, CheckRow, Verified, Rating, inr, priceOf } from '../ui.jsx'
 import { CATS, cat as catOf } from '../data.js'
 
 const SORTS = [['rel', 'Relevance'], ['dist', 'Distance'], ['low', 'Price: low to high'], ['rate', 'Rating']]
 const PRICE_CAPS = [null, 500, 2500, 5000, 25000]
+const RADII = [null, 2, 5, 10]
+const NO_FLT = { cap: null, rate4: false, offer: false, verified: false, radius: null }
 
 export default function Explore() {
   const app = useApp()
@@ -12,7 +14,7 @@ export default function Explore() {
   const [catId, setCatId] = useState('all')
   const [type, setType] = useState('product')
   const [sort, setSort] = useState('rel')
-  const [flt, setFlt] = useState({ cap: null, rate4: false, offer: false, verified: false })
+  const [flt, setFlt] = useState(NO_FLT)
   const [view, setView] = useState('list')
   const [pin, setPin] = useState(null)
   const [sheet, setSheet] = useState(null)
@@ -28,34 +30,48 @@ export default function Explore() {
     if (s.view) setView(s.view)
     app.setExploreSeed(null)
   }, [app.exploreSeed])
+  useEffect(() => { setPin(null) }, [type, catId, app.area.id])
 
   const pickCat = (id) => { setCatId(id); if (id === 'events') setType('event'); else if (type === 'event') setType('product') }
   const ql = q.trim().toLowerCase()
   const match = (...fields) => !ql || ql.split(/\s+/).every((w) => fields.some((f) => f && f.toLowerCase().includes(w)))
   const d = (b) => app.distOf(b) ?? 0
   const inCat = (c) => catId === 'all' || c === catId
+  const inRadius = (o) => !flt.radius || d(o) <= flt.radius
 
   let items = []
   if (!app.area.remote) {
     if (type === 'product') {
       items = app.products.filter((p) => inCat(p.cat) && match(p.name, p.tags.join(' '), app.biz(p.bizId).name, catOf(p.cat).label))
-        .filter((p) => (!flt.cap || p.price <= flt.cap) && (!flt.rate4 || p.rating >= 4.5) && (!flt.offer || app.offerFor(p.id)) && (!flt.verified || app.biz(p.bizId).verified))
+        .filter((p) => (!flt.cap || p.price <= flt.cap) && (!flt.rate4 || p.rating >= 4.5) && (!flt.offer || app.offerFor(p.id)) && (!flt.verified || app.biz(p.bizId).verified) && inRadius(app.biz(p.bizId)))
       if (sort === 'dist') items.sort((a, b) => d(app.biz(a.bizId)) - d(app.biz(b.bizId)))
       if (sort === 'low') items.sort((a, b) => a.price - b.price)
       if (sort === 'rate') items.sort((a, b) => b.rating - a.rating)
     } else if (type === 'biz') {
       items = app.businesses.filter((b) => inCat(b.cat) && match(b.name, b.tagline, b.addr, catOf(b.cat).label))
-        .filter((b) => (!flt.rate4 || b.rating >= 4.5) && (!flt.verified || b.verified) && (!flt.offer || app.offers.some((o) => o.bizId === b.id)))
+        .filter((b) => (!flt.rate4 || b.rating >= 4.5) && (!flt.verified || b.verified) && (!flt.offer || app.offers.some((o) => o.bizId === b.id)) && inRadius(b))
       items = [...items].sort((a, b) => (sort === 'rate' ? b.rating - a.rating : d(a) - d(b)))
     } else {
-      items = app.events.filter((e) => match(e.name, e.type, e.venue)).filter((e) => !flt.cap || e.price <= flt.cap)
+      items = app.events.filter((e) => match(e.name, e.type, e.venue)).filter((e) => (!flt.cap || e.price <= flt.cap) && inRadius(e))
       if (sort === 'low') items = [...items].sort((a, b) => a.price - b.price)
+      if (sort === 'dist') items = [...items].sort((a, b) => d(a) - d(b))
     }
   }
-  const nFlt = (flt.cap ? 1 : 0) + flt.rate4 + flt.offer + flt.verified
+  const nFlt = (flt.cap ? 1 : 0) + flt.rate4 + flt.offer + flt.verified + (flt.radius ? 1 : 0)
   const sponsored = type === 'product' && !ql && catId === 'all' && sort === 'rel' && !nFlt ? app.prod('h3') : null
-  const showMap = view === 'map' && type === 'biz'
-  const selected = pin && items.find((b) => b.id === pin)
+  const isMap = view === 'map'
+
+  // Every result maps to the coordinates of the shop (or venue) behind it.
+  const pins = useMemo(() => {
+    if (type === 'biz') return items.map((b) => ({ id: b.id, x: b.x, y: b.y, img: b.cover, title: b.name, sub: `${catOf(b.cat).label} · ${app.distLabel(b)}`, biz: b, open: () => app.go('biz', b.id) }))
+    if (type === 'event') return items.map((e) => ({ id: e.id, x: e.x, y: e.y, img: e.img, title: e.name, sub: `${e.date} · ${e.priceLabel.split(' ·')[0]}`, event: e, open: () => app.go('event', e.id) }))
+    const groups = new Map()
+    items.forEach((p) => { if (!groups.has(p.bizId)) groups.set(p.bizId, []); groups.get(p.bizId).push(p) })
+    return [...groups].map(([bizId, ps]) => {
+      const b = app.biz(bizId)
+      return { id: bizId, x: b.x, y: b.y, img: ps[0].img, title: b.name, sub: `${ps.length} matching item${ps.length > 1 ? 's' : ''} · ${app.distLabel(b)}`, biz: b, products: ps, count: ps.length, open: () => app.go('biz', bizId) }
+    })
+  }, [items.map((i) => i.id).join(), type, app.area.id])
 
   return (
     <>
@@ -86,33 +102,28 @@ export default function Explore() {
           <div className="between" style={{ marginTop: 12 }}>
             <div className="row" style={{ gap: 8 }}>
               <button className={`chip ${nFlt ? 'on blue' : ''}`} onClick={() => setSheet('filter')}><SlidersHorizontal size={14} />Filters{nFlt ? ` · ${nFlt}` : ''}</button>
-              <button className="chip" onClick={() => setSheet('sort')}><ArrowUpDown size={14} />{SORTS.find((s) => s[0] === sort)[1].split(':')[0]}</button>
+              {!isMap && <button className="chip" onClick={() => setSheet('sort')}><ArrowUpDown size={14} />{SORTS.find((s) => s[0] === sort)[1].split(':')[0]}</button>}
             </div>
-            {type === 'biz' && (
-              <div className="seg" style={{ padding: 3 }}>
-                <button className={view === 'list' ? 'on' : ''} aria-label="List view" onClick={() => setView('list')} style={{ minHeight: 34, padding: '0 10px' }}><List size={16} /></button>
-                <button className={view === 'map' ? 'on' : ''} aria-label="Map view" onClick={() => setView('map')} style={{ minHeight: 34, padding: '0 10px' }}><MapIcon size={16} /></button>
-              </div>
-            )}
+            <div className="seg" style={{ padding: 3 }} role="group" aria-label="Result layout">
+              <button className={!isMap ? 'on' : ''} aria-label="List view" aria-pressed={!isMap} onClick={() => setView('list')} style={{ minHeight: 34, padding: '0 12px' }}><List size={16} /></button>
+              <button className={isMap ? 'on' : ''} aria-label="Map view" aria-pressed={isMap} onClick={() => setView('map')} style={{ minHeight: 34, padding: '0 12px' }}><MapIcon size={16} />Map</button>
+            </div>
           </div>
           <div className="tiny muted" style={{ marginTop: 10 }}>
-            {app.area.remote ? '' : `${items.length} result${items.length === 1 ? '' : 's'}${ql ? ` for “${q.trim()}”` : ''} · distances from ${app.area.name} centre`}
+            {app.area.remote ? '' : `${items.length} result${items.length === 1 ? '' : 's'}${isMap && type === 'product' ? ` at ${pins.length} shop${pins.length === 1 ? '' : 's'}` : ''}${ql ? ` for “${q.trim()}”` : ''}${flt.radius ? ` within ${flt.radius} km` : ''} · distances from ${app.area.name} centre`}
           </div>
         </div>
 
         {app.area.remote ? (
           <Empty icon={MapPinOff} title={`Nothing listed in ${app.area.name} yet`} text={`Lesho hasn't onboarded businesses in ${app.area.city} in this preview.`} action="Choose another area" onAction={app.openArea} />
+        ) : isMap ? (
+          <div className="pad" style={{ marginTop: 10 }}>
+            <MapView pins={pins} type={type} sel={pin} setSel={setPin} radius={flt.radius} setRadius={(r) => setFlt({ ...flt, radius: r })} />
+            <div style={{ marginTop: 10 }}><Note icon={Info}>Illustrative static map. Pins sit at each shop's or venue's listed location; the orange dot is the centre of {app.area.name}, not your live location.</Note></div>
+          </div>
         ) : items.length === 0 ? (
           <Empty icon={SearchX} title="No matches" text="Try a broader term, another category or fewer filters. You can also ask the guide to find alternatives."
             action="Ask the guide" onAction={() => { app.setGuideSeed({ text: q || catOf(catId)?.label || 'Explore local stores', t: Date.now() }); app.tab('guide') }} />
-        ) : showMap ? (
-          <div className="pad" style={{ marginTop: 12 }}>
-            <MockMap items={items} pin={pin} setPin={setPin} />
-            <Note icon={Info}>Illustrative static map. The orange dot is the centre of {app.area.name}, not your live location.</Note>
-            <div style={{ marginTop: 12 }}>
-              {selected ? <div className="card" style={{ padding: '0 12px' }}><BizCard b={selected} row /></div> : <div className="small muted" style={{ textAlign: 'center', padding: 12 }}>Tap a pin to preview a business</div>}
-            </div>
-          </div>
         ) : type === 'product' ? (
           <div className="pad grid2" style={{ marginTop: 14 }}>
             {items.slice(0, 2).map((p) => <ProductCard key={p.id} p={p} grid />)}
@@ -131,14 +142,16 @@ export default function Explore() {
         )}
       </div>
 
-      <button className="btn dark sm" style={{ position: 'absolute', right: 16, bottom: 94, zIndex: 35, boxShadow: 'var(--shadow-2)' }}
-        onClick={() => { if (ql) app.setGuideSeed({ text: q, t: Date.now() }); app.tab('guide') }}>
-        <Sparkles size={15} color="var(--orange)" />Ask guide
-      </button>
+      {!isMap && (
+        <button className="btn dark sm" style={{ position: 'absolute', right: 16, bottom: 94, zIndex: 35, boxShadow: 'var(--shadow-2)' }}
+          onClick={() => { if (ql) app.setGuideSeed({ text: q, t: Date.now() }); app.tab('guide') }}>
+          <Sparkles size={15} color="var(--orange)" />Ask guide
+        </button>
+      )}
 
       {sheet === 'sort' && (
         <Sheet title="Sort by" onClose={() => setSheet(null)}>
-          {SORTS.filter((s) => type === 'product' || (type === 'biz' ? s[0] !== 'low' : ['rel', 'low'].includes(s[0]))).map(([id, l]) => (
+          {SORTS.filter((s) => type === 'product' || (type === 'biz' ? s[0] !== 'low' : s[0] !== 'rate')).map(([id, l]) => (
             <CheckRow key={id} on={sort === id} onClick={() => { setSort(id); setSheet(null) }}><span className="b">{l}</span></CheckRow>
           ))}
           <Note icon={Info}>Relevance never ranks by payment. Sponsored results are always labelled.</Note>
@@ -146,16 +159,18 @@ export default function Explore() {
       )}
       {sheet === 'filter' && (
         <Sheet title="Filters" onClose={() => setSheet(null)}
-          footer={<div className="row"><button className="btn ghost" onClick={() => setFlt({ cap: null, rate4: false, offer: false, verified: false })}>Clear</button><button className="btn primary grow" onClick={() => setSheet(null)}>Show {items.length} result{items.length === 1 ? '' : 's'}</button></div>}>
+          footer={<div className="row"><button className="btn ghost" onClick={() => setFlt(NO_FLT)}>Clear</button><button className="btn primary grow" onClick={() => setSheet(null)}>Show {items.length} result{items.length === 1 ? '' : 's'}</button></div>}>
+          <div className="b small" style={{ margin: '4px 0 8px' }}>Distance from {app.area.name} centre</div>
+          <div className="wrap">{RADII.map((r) => <Chip key={r ?? 'any'} on={flt.radius === r} onClick={() => setFlt({ ...flt, radius: r })}>{r ? `Within ${r} km` : 'Any distance'}</Chip>)}</div>
           {type !== 'biz' && (
             <>
-              <div className="b small" style={{ margin: '4px 0 8px' }}>Maximum price</div>
+              <div className="b small" style={{ margin: '16px 0 8px' }}>Maximum price</div>
               <div className="wrap">{PRICE_CAPS.map((c) => <Chip key={c ?? 'any'} on={flt.cap === c} onClick={() => setFlt({ ...flt, cap: c })}>{c ? `Up to ${inr(c)}` : 'Any'}</Chip>)}</div>
-              <div className="divider" style={{ margin: '16px 0 8px' }} />
             </>
           )}
           {type !== 'event' && (
             <>
+              <div className="divider" style={{ margin: '16px 0 8px' }} />
               <CheckRow on={flt.rate4} onClick={() => setFlt({ ...flt, rate4: !flt.rate4 })}><span className="b">Rated 4.5 and above</span></CheckRow>
               <CheckRow on={flt.verified} onClick={() => setFlt({ ...flt, verified: !flt.verified })}><span className="b">Verified businesses only</span></CheckRow>
               <CheckRow on={flt.offer} onClick={() => setFlt({ ...flt, offer: !flt.offer })}><span className="b">Has a current offer</span><br /><span className="muted">Businesses are listed with or without offers</span></CheckRow>
@@ -167,27 +182,153 @@ export default function Explore() {
   )
 }
 
-function MockMap({ items, pin, setPin }) {
+/* ---------- Pannable, zoomable illustrative map with photo pins ---------- */
+const KX = [-7.6, 5.6], KY = [-5.8, 3.6]            // map bounds in km (x east, y north)
+const ASPECT = (KX[1] - KX[0]) / (KY[1] - KY[0])
+const ZOOMS = [1, 1.55, 2.3]
+const VH = 470
+
+function MapView({ pins, type, sel, setSel, radius, setRadius }) {
   const app = useApp()
-  const X = [-7.6, 5.6], Y = [-5.8, 3.6]
-  const px = (x) => `${((x - X[0]) / (X[1] - X[0])) * 100}%`
-  const py = (y) => `${((Y[1] - y) / (Y[1] - Y[0])) * 100}%`
+  const [zi, setZi] = useState(1)
+  const vp = useRef(), centre = useRef(null), drag = useRef(null), cards = useRef({})
+  const H = VH * ZOOMS[zi], W = H * ASPECT
+  const px = (x) => ((x - KX[0]) / (KX[1] - KX[0])) * W
+  const py = (y) => ((KY[1] - y) / (KY[1] - KY[0])) * H
+  const OFF = (VH - (type === 'product' ? 190 : 104)) / 2 + 48 // keep the focus point clear of the result cards
+  const centreOn = (x, y, smooth) => vp.current?.scrollTo({ left: px(x) - vp.current.clientWidth / 2, top: py(y) - OFF, behavior: smooth ? 'smooth' : 'auto' })
+  const selPin = pins.find((p) => p.id === sel)
+
+  // Keep the same spot in view when zooming; start centred on the chosen area.
+  useLayoutEffect(() => {
+    const c = centre.current
+    if (c) centreOn(c.x, c.y)
+    else centreOn(app.area.x, app.area.y)
+  }, [zi])
+  useEffect(() => { centre.current = null; centreOn(app.area.x, app.area.y, true) }, [app.area.id])
+  useEffect(() => {
+    if (!selPin) return
+    centreOn(selPin.x, selPin.y, true)
+    cards.current[selPin.id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [sel])
+  const onScroll = () => {
+    const el = vp.current
+    centre.current = { x: KX[0] + ((el.scrollLeft + el.clientWidth / 2) / W) * (KX[1] - KX[0]), y: KY[1] - ((el.scrollTop + OFF) / H) * (KY[1] - KY[0]) }
+  }
+  // Mouse drag pans the map on desktop; touch uses native scrolling.
+  const onDown = (e) => { if (e.pointerType === 'mouse') drag.current = { x: e.clientX, y: e.clientY, l: vp.current.scrollLeft, t: vp.current.scrollTop, moved: false } }
+  const onMove = (e) => {
+    const g = drag.current
+    if (!g) return
+    const dx = e.clientX - g.x, dy = e.clientY - g.y
+    if (Math.abs(dx) + Math.abs(dy) > 4) g.moved = true
+    vp.current.scrollLeft = g.l - dx; vp.current.scrollTop = g.t - dy
+  }
+  const onUp = () => { const g = drag.current; drag.current = null; return g?.moved }
+  const rDiam = radius ? ((2 * radius) / 1.25 / (KX[1] - KX[0])) * W : 0
+  const callBelow = selPin && py(selPin.y) < 190
+
   return (
-    <div className="map" style={{ marginBottom: 10 }}>
-      <svg className="bg" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true">
-        <rect width="400" height="300" fill="#eef2f6" />
-        <path d="M285 0 C270 70 300 120 282 180 S300 260 290 300" stroke="#cfe0f5" strokeWidth="26" fill="none" />
-        <path d="M0 96 H400 M0 196 H400 M70 0 V300 M170 0 V300 M240 0 V300 M340 0 V300" stroke="#fff" strokeWidth="7" />
-        <path d="M0 40 L400 150 M20 300 L210 0" stroke="#fff" strokeWidth="4" />
-        <rect x="88" y="112" width="60" height="62" rx="8" fill="#dcefe2" />
-        <rect x="186" y="214" width="40" height="44" rx="8" fill="#dcefe2" />
-      </svg>
-      <span className="you" style={{ left: px(app.area.x), top: py(app.area.y) }} title={`${app.area.name} centre`} />
-      {items.map((b) => (
-        <button key={b.id} className={`pin ${pin === b.id ? 'on' : ''}`} style={{ left: px(b.x), top: py(b.y), zIndex: pin === b.id ? 2 : 1 }} aria-label={b.name} onClick={() => setPin(b.id)}>
-          <i><CatIcon id={b.cat} size={14} /></i>
-        </button>
-      ))}
+    <div className="mapwrap">
+      <div className="mapvp" ref={vp} onScroll={onScroll} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}
+        onClick={(e) => { if (e.target === e.currentTarget || e.target.tagName === 'svg' || e.target.closest('svg')) setSel(null) }}>
+        <div className="mapinner" style={{ width: W, height: H }}>
+          <MapArt areas={app.areas.filter((a) => !a.remote)} />
+          {radius && <span className="mradius" style={{ left: px(app.area.x), top: py(app.area.y), width: rDiam, height: rDiam }} />}
+          <span className="mcentre" style={{ left: px(app.area.x), top: py(app.area.y) }} title={`${app.area.name} centre`} />
+          {pins.map((p) => (
+            <button key={p.id} className={`mpin ${sel === p.id ? 'on' : ''}`} style={{ left: px(p.x), top: py(p.y), zIndex: sel === p.id ? 50 : 10 + Math.round(py(p.y) / 20) }}
+              aria-label={p.title} aria-pressed={sel === p.id} onClick={(e) => { e.stopPropagation(); setSel(p.id) }}>
+              <span className="ph"><Img id={p.img} w={120} alt="" /></span>
+              {p.count > 1 && <span className="ct">{p.count}</span>}
+            </button>
+          ))}
+          {selPin && (
+            <button className="mcall" onClick={(e) => { e.stopPropagation(); selPin.open() }}
+              style={{ left: Math.max(8, Math.min(W - 222, px(selPin.x) - 107)), top: callBelow ? py(selPin.y) + 8 : py(selPin.y) - 76 - 52 }}>
+              <span className="grow"><span className="b small clamp1" style={{ display: 'block' }}>{selPin.title}</span><span className="tiny muted clamp1" style={{ display: 'block' }}>{selPin.sub}</span></span>
+              <ChevronRight size={18} color="var(--blue)" style={{ flex: 'none' }} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="maptop">
+        {RADII.slice(0, 3).map((r) => <button key={r ?? 'any'} className={`chip ${radius === r ? 'on' : ''}`} aria-pressed={radius === r} onClick={() => setRadius(r)}>{r ? `${r} km` : 'Any distance'}</button>)}
+      </div>
+      <div className="mapctl">
+        <button className="icon-btn" aria-label="Zoom in" disabled={zi === ZOOMS.length - 1} onClick={() => setZi(zi + 1)}><Plus size={18} /></button>
+        <button className="icon-btn" aria-label="Zoom out" disabled={zi === 0} onClick={() => setZi(zi - 1)}><Minus size={18} /></button>
+        <button className="icon-btn" aria-label={`Centre on ${app.area.name}`} onClick={() => { setSel(null); centreOn(app.area.x, app.area.y, true) }}><LocateFixed size={18} /></button>
+      </div>
+      {pins.length === 0 && <div className="mapnote">No results on the map{radius ? ` within ${radius} km` : ''}.<br />Try a wider distance or fewer filters.</div>}
+
+      <div className="mapcards" aria-label="Results on the map">
+        {pins.map((p) => (
+          <div key={p.id} ref={(el) => { cards.current[p.id] = el }} className={`mcard ${sel === p.id ? 'on' : ''}`} onClick={() => setSel(p.id)}>
+            <div className="row" style={{ gap: 10 }}>
+              <Img className="th" id={p.event ? p.event.img : p.biz.cover} w={140} alt="" />
+              <div className="grow">
+                <div className="row" style={{ gap: 4 }}><span className="b small clamp1">{p.title}</span>{p.biz && <Verified biz={p.biz} size={13} />}</div>
+                <div className="tiny muted clamp1">{p.event ? `${p.event.date} · ${p.event.venue}` : p.sub}</div>
+                {p.biz && !p.products && <div style={{ marginTop: 2 }}><Rating value={p.biz.rating} count={p.biz.reviews} /></div>}
+                {p.event && <div className="tiny b" style={{ marginTop: 2 }}>{p.event.priceLabel.split(' ·')[0]}</div>}
+              </div>
+              <button className="btn soft sm" style={{ padding: '0 12px', minHeight: 36 }} aria-label={`Open ${p.title}`} onClick={(e) => { e.stopPropagation(); p.open() }}>{type === 'event' ? 'Details' : 'Shop'}</button>
+            </div>
+            {p.products && (
+              <div className="mini">
+                {p.products.slice(0, 3).map((pr) => (
+                  <button key={pr.id} onClick={(e) => { e.stopPropagation(); app.go('product', pr.id) }} aria-label={pr.name}>
+                    <Img id={pr.img} w={160} alt="" />
+                    <span className="tiny b clamp1" style={{ display: 'block', marginTop: 4 }}>{priceOf(pr)}</span>
+                    <span className="tiny muted clamp1" style={{ display: 'block' }}>{pr.name}</span>
+                  </button>
+                ))}
+                {p.products.length < 3 && Array.from({ length: 3 - p.products.length }).map((_, i) => <span key={i} style={{ flex: 1 }} />)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
+
+/* Hand-drawn city backdrop at 100 px per km. Not real cartography. */
+const MapArt = React.memo(function MapArt({ areas }) {
+  const X = (x) => (x - KX[0]) * 100, Y = (y) => (KY[1] - y) * 100
+  return (
+    <svg viewBox="0 0 1320 940" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <pattern id="blocks" width="66" height="58" patternUnits="userSpaceOnUse" patternTransform="rotate(-6)">
+          <rect width="66" height="58" fill="#eef1f5" /><path d="M0 0H66M0 0V58" stroke="#fff" strokeWidth="5" />
+        </pattern>
+      </defs>
+      <rect width="1320" height="940" fill="url(#blocks)" />
+      <path d="M930 -10 C900 150 990 260 950 420 S1010 700 960 950" stroke="#cbdff5" strokeWidth="58" fill="none" strokeLinecap="round" />
+      <ellipse cx={X(-3.6)} cy={Y(-0.7)} rx="46" ry="30" fill="#cbdff5" />
+      <rect x={X(0.0)} y={Y(-0.9)} width="74" height="60" rx="12" fill="#d9eedf" />
+      <rect x={X(-5.3)} y={Y(-1.4)} width="96" height="70" rx="12" fill="#d9eedf" />
+      <rect x={X(2.9)} y={Y(-3.2)} width="110" height="84" rx="12" fill="#d9eedf" />
+      <rect x={X(-2.0)} y={Y(2.6)} width="84" height="56" rx="12" fill="#d9eedf" />
+      <g stroke="#fff" strokeWidth="16" fill="none" strokeLinecap="round">
+        <path d="M90 -10 C150 260 120 560 210 950" />
+        <path d="M500 -10 C520 300 480 620 520 950" />
+        <path d="M790 -10 C770 320 800 640 780 950" />
+        <path d="M-10 170 C400 150 800 190 1330 150" />
+        <path d="M-10 350 C420 330 860 360 1330 340" />
+        <path d="M-10 600 C380 570 900 620 1330 580" />
+        <path d="M-10 780 C420 800 880 760 1330 800" />
+        <path d="M1080 -10 C1100 320 1060 640 1110 950" />
+      </g>
+      <g stroke="#f7d9b8" strokeWidth="5" fill="none" strokeLinecap="round">
+        <path d="M90 -10 C150 260 120 560 210 950" /><path d="M-10 350 C420 330 860 360 1330 340" />
+      </g>
+      <g fontFamily="inherit" fontSize="17" fontWeight="700" fill="#9aa0ab" letterSpacing="2" textAnchor="middle">
+        {areas.map((a) => <text key={a.id} x={X(a.x)} y={Y(a.y) + 52}>{a.name.toUpperCase()}</text>)}
+        <text x="975" y="250" fill="#8fb4de" transform="rotate(78 975 250)" letterSpacing="4">SABARMATI</text>
+      </g>
+    </svg>
+  )
+})

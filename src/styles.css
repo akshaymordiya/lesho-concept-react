@@ -419,3 +419,59 @@ table.cmp tr:first-child td, table.cmp tr:first-child th { border-top: 0; }
 .savedrow { display: flex; align-items: center; gap: 4px; }
 .savedrow + .savedrow { border-top: 1px solid var(--border); }
 .savedrow .listrow > svg:last-child { display: none; }
+
+/* ---------- Reels feed (vertical, one reel per swipe) ---------- */
+.reels { position: absolute; inset: 0; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; overscroll-behavior: contain; }
+.reels::-webkit-scrollbar, .hsnap::-webkit-scrollbar, .mapvp::-webkit-scrollbar { display: none; }
+.reelpage { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; overflow: hidden; }
+.reelprog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .22); z-index: 4; }
+.reelprog b { display: block; height: 100%; background: #fff; }
+.viewer .burst { position: absolute; animation: burst .7s var(--ease) forwards; pointer-events: none; }
+@keyframes burst { 0% { transform: scale(.3); opacity: 0; } 30% { transform: scale(1.15); opacity: 1; } 70% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.1); opacity: 0; } }
+.swipehint { position: absolute; left: 50%; top: 42%; transform: translateX(-50%); z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12.5px; font-weight: 700; color: #fff; background: rgba(0, 0, 0, .5); padding: 10px 16px; border-radius: var(--r-lg); pointer-events: none; animation: nudge 1.4s ease-in-out infinite; white-space: nowrap; }
+@keyframes nudge { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
+
+/* ---------- Photo carousel inside the post viewer ---------- */
+.viewer .media.hsnap { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior: contain; }
+.slidepage { position: relative; flex: none; width: 100%; height: 100%; scroll-snap-align: center; scroll-snap-stop: always; }
+.viewer > .shade { z-index: 1; }
+
+/* ---------- Stories ---------- */
+.viewer.story { touch-action: none; user-select: none; -webkit-user-select: none; }
+.tapzone { position: absolute; top: 0; bottom: 0; z-index: 2; }
+.reel.story { outline: 2.5px solid var(--blue); outline-offset: 2px; }
+.reel.story.seen { outline-color: #d5d9e0; }
+.hscroll.stories { padding-top: 6px; padding-bottom: 6px; gap: 14px; }
+.avatar.ringed { outline: 2.5px solid var(--blue); outline-offset: 2px; cursor: pointer; }
+.avatar.ringed.seen { outline-color: #d5d9e0; }
+
+/* ---------- Map view ---------- */
+.mapwrap { position: relative; height: 470px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border); background: #eef1f5; }
+.mapvp { position: absolute; inset: 0; overflow: auto; scrollbar-width: none; overscroll-behavior: contain; cursor: grab; }
+.mapvp.drag { cursor: grabbing; }
+.mapinner { position: relative; }
+.mapinner > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mpin { position: absolute; width: 46px; height: 56px; transform: translate(-50%, -100%); transform-origin: 50% 100%; transition: transform .18s var(--ease); }
+.mpin .ph { display: block; width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--ink); overflow: hidden; background: #fff; box-shadow: var(--shadow-2); position: relative; z-index: 1; }
+.mpin::after { content: ''; position: absolute; left: 50%; top: 42px; transform: translateX(-50%); border: 8px solid transparent; border-top: 12px solid var(--ink); }
+.mpin .img { width: 100%; height: 100%; }
+.mpin.on { transform: translate(-50%, -100%) scale(1.18); }
+.mpin.on .ph { border-color: var(--blue); }
+.mpin.on::after { border-top-color: var(--blue); }
+.mpin .ct { position: absolute; top: -4px; right: -6px; z-index: 2; min-width: 20px; height: 20px; border-radius: 10px; background: var(--orange); color: var(--ink); font-size: 11px; font-weight: 800; display: grid; place-items: center; padding: 0 5px; border: 2px solid #fff; }
+.mcall { position: absolute; z-index: 60; width: 214px; background: #fff; border-radius: 14px; box-shadow: var(--shadow-2); padding: 9px 8px 9px 12px; display: flex; align-items: center; gap: 6px; text-align: left; animation: fadeIn .18s; }
+.mcentre { position: absolute; transform: translate(-50%, -50%); width: 16px; height: 16px; border-radius: 50%; background: var(--orange); border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(255, 138, 50, .22); }
+.mradius { position: absolute; border-radius: 50%; border: 1.5px dashed var(--blue); background: rgba(47, 109, 235, .07); transform: translate(-50%, -50%); pointer-events: none; }
+.mapctl { position: absolute; right: 10px; top: 10px; z-index: 5; display: flex; flex-direction: column; gap: 6px; }
+.mapctl .icon-btn { width: 40px; height: 40px; box-shadow: var(--shadow-2); border: 0; }
+.maptop { position: absolute; left: 10px; top: 10px; z-index: 5; display: flex; gap: 6px; }
+.maptop .chip { min-height: 34px; padding: 0 12px; box-shadow: var(--shadow-1); }
+.mapcards { position: absolute; left: 0; right: 0; bottom: 10px; z-index: 5; display: flex; gap: 10px; overflow-x: auto; padding: 4px 12px; scrollbar-width: none; scroll-snap-type: x proximity; scroll-padding-inline: 12px; }
+.mapcards::-webkit-scrollbar { display: none; }
+.mcard { flex: none; width: 262px; background: #fff; border-radius: 16px; box-shadow: var(--shadow-2); padding: 10px; scroll-snap-align: start; border: 2px solid transparent; transition: border-color .15s; cursor: pointer; }
+.mcard.on { border-color: var(--blue); }
+.mcard .img.th { width: 54px; height: 54px; border-radius: 12px; flex: none; }
+.mcard .mini { display: flex; gap: 6px; margin-top: 8px; }
+.mcard .mini button { flex: 1; min-width: 0; text-align: left; }
+.mcard .mini .img { aspect-ratio: 1; border-radius: 10px; }
+.mapnote { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; background: rgba(23, 25, 29, .86); color: #fff; padding: 10px 14px; border-radius: var(--r-md); font-size: 13px; font-weight: 600; text-align: center; width: max-content; max-width: 80%; }

@@ -89,6 +89,26 @@ export default function Home() {
           </section>
 
           <section className="section">
+            <SectionHead title="Stories" sub="Today's updates from local shops" />
+            <div className="hscroll stories">
+              {app.stories.map((s) => {
+                const b = app.biz(s.bizId), seen = !!app.seenStories[s.bizId]
+                return (
+                  <button key={s.bizId} className={`reel story ${seen ? 'seen' : ''}`} style={{ width: 118 }} onClick={() => app.go('story', s.bizId)} aria-label={`${b.name} story, ${s.items.length} update${s.items.length > 1 ? 's' : ''}${seen ? ', seen' : ''}`}>
+                    <Img id={s.items[0].img} w={300} alt="" />
+                    <span className="shade" />
+                    <span className="top"><span className="avatar sm" style={{ background: '#fff', color: 'var(--ink)' }}>{b.name[0]}</span><span className="badge glass">{s.items.length}</span></span>
+                    <span className="bot">
+                      <span className="b clamp2" style={{ fontSize: 13, lineHeight: 1.25, display: '-webkit-box' }}>{b.name}</span>
+                      <span className="tiny clamp1" style={{ opacity: .85, marginTop: 3, display: 'block' }}>{seen ? 'Seen' : s.items[s.items.length - 1].time}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          <section className="section">
             <SectionHead title="Product reels" sub="Short videos from local businesses" />
             <div className="hscroll">{reels.map((p) => <PostTile key={p.id} post={p} />)}</div>
           </section>

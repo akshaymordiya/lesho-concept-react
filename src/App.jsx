@@ -1,25 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Home as HomeIcon, Compass, Sparkles, Bookmark, User, LayoutDashboard, Inbox, PlusCircle, Package, BarChart3, Signal, Wifi, BatteryFull } from 'lucide-react'
 import { Ctx } from './ui.jsx'
-import { AREAS, BUSINESSES, PRODUCTS, EVENTS, OFFERS, REVIEWS, POSTS, SEED_REFS, SEED_LEADS } from './data.js'
+import { AREAS, BUSINESSES, PRODUCTS, EVENTS, OFFERS, REVIEWS, POSTS, SEED_REFS, SEED_LEADS, STORIES } from './data.js'
 import Home from './screens/Home.jsx'
 import Guide from './screens/Guide.jsx'
 import Explore from './screens/Explore.jsx'
 import { ProductDetail, BusinessProfile, EventDetail, OfferDetail } from './screens/Detail.jsx'
-import Viewer from './screens/Viewer.jsx'
+import Viewer, { StoryViewer } from './screens/Viewer.jsx'
 import { LeadSheet, VisitIntent, RefConfirm, ReviewComposer, AreaSheet } from './screens/Flows.jsx'
 import { Saved, Profile, Onboarding } from './screens/Me.jsx'
 import { MDashboard, MLeads, MLeadDetail, MCreate, MCatalogue, MAnalytics } from './screens/Merchant.jsx'
 
 const SCREENS = {
   home: Home, explore: Explore, guide: Guide, saved: Saved, profile: Profile,
-  product: ProductDetail, biz: BusinessProfile, event: EventDetail, offer: OfferDetail, viewer: Viewer, visit: VisitIntent, ref: RefConfirm,
+  product: ProductDetail, biz: BusinessProfile, event: EventDetail, offer: OfferDetail, viewer: Viewer, story: StoryViewer, visit: VisitIntent, ref: RefConfirm,
   mdash: MDashboard, mleads: MLeads, mlead: MLeadDetail, mcreate: MCreate, mcat: MCatalogue, manalytics: MAnalytics,
 }
 const C_TABS = [['home', 'Home', HomeIcon], ['explore', 'Explore', Compass], ['guide', 'Guide', Sparkles], ['saved', 'Saved', Bookmark], ['profile', 'You', User]]
 const M_TABS = [['mdash', 'Home', LayoutDashboard], ['mleads', 'Leads', Inbox], ['mcreate', 'Create', PlusCircle], ['mcat', 'Catalogue', Package], ['manalytics', 'Insights', BarChart3]]
 const TAB_NAMES = new Set([...C_TABS, ...M_TABS].map((t) => t[0]))
-const DARK_TOP = new Set(['viewer', 'ref', 'mdash'])
+const DARK_TOP = new Set(['viewer', 'story', 'ref', 'mdash'])
 
 let keySeq = 0
 const entry = (name, param) => ({ name, param, key: `${name}-${++keySeq}` })
@@ -49,6 +49,8 @@ export default function App() {
   const [posts, setPosts] = useState(POSTS)
   const [offers, setOffers] = useState(OFFERS)
   const [events, setEvents] = useState(EVENTS)
+  const [stories, setStories] = useState(STORIES)
+  const [seenStories, setSeenStories] = useState({})
   const [reviews, setReviews] = useState(REVIEWS)
   const [prefs, setPrefs] = useState({ personal: true, offers: true, approx: true, interests: ['fashion', 'food', 'events'] })
   const [sheet, setSheet] = useState(null)
@@ -75,7 +77,7 @@ export default function App() {
     const biz = (id) => BUSINESSES.find((b) => b.id === id)
     const distOf = (b) => area.remote ? null : Math.max(0.3, Math.hypot(b.x - area.x, b.y - area.y) * 1.25)
     return {
-      mode, area, areas: AREAS, businesses: BUSINESSES, events, products, posts, offers, reviews, refs, leads, prefs, saved, following,
+      mode, area, areas: AREAS, businesses: BUSINESSES, events, stories, seenStories, sheetOpen: !!sheet, products, posts, offers, reviews, refs, leads, prefs, saved, following,
       guideSeed, exploreSeed, setGuideSeed, setExploreSeed,
       biz, prod: (id) => products.find((p) => p.id === id), event: (id) => events.find((e) => e.id === id),
       offer: (id) => offers.find((o) => o.id === id), review: (id) => reviews.find((r) => r.id === id), post: (id) => posts.find((p) => p.id === id),
@@ -119,10 +121,12 @@ export default function App() {
       publish: (post) => setPosts((ps) => [post, ...ps]),
       addOffer: (o) => setOffers((os) => [o, ...os]),
       addEvent: (e) => setEvents((es) => [e, ...es]),
+      markStorySeen: (id) => setSeenStories((s) => (s[id] ? s : { ...s, [id]: true })),
+      addStory: (bizId, item) => { setStories((ss) => (ss.some((s) => s.bizId === bizId) ? ss.map((s) => (s.bizId === bizId ? { ...s, items: [...s.items, item] } : s)) : [{ bizId, items: [item] }, ...ss])); setSeenStories((s) => ({ ...s, [bizId]: false })) },
       addReview: (r) => setReviews((rs) => [r, ...rs]),
       restartOnboarding: () => { setStack([entry('home')]); setOnboarding(true) },
     }
-  }, [mode, area, products, posts, offers, events, reviews, refs, leads, prefs, saved, liked, following, guideSeed, exploreSeed, toast])
+  }, [mode, area, products, posts, offers, events, stories, seenStories, sheet, reviews, refs, leads, prefs, saved, liked, following, guideSeed, exploreSeed, toast])
 
   const jump = (m, ...path) => {
     setOnboarding(false); setSheet(null); setModeRaw(m)
@@ -149,9 +153,11 @@ export default function App() {
             <button onClick={() => jump('consumer', ['home'])}>Home</button>
             <button onClick={() => jump('consumer', ['guide'])}>AI guide</button>
             <button onClick={() => jump('consumer', ['explore'])}>Explore</button>
+            <button onClick={() => { jump('consumer', ['explore']); setExploreSeed({ view: 'map', t: Date.now() }) }}>Map view</button>
             <button onClick={() => jump('consumer', ['home'], ['product', 'p1'])}>Product</button>
             <button onClick={() => jump('consumer', ['home'], ['biz', 'b1'])}>Business</button>
-            <button onClick={() => jump('consumer', ['home'], ['viewer', 'r1'])}>Reel</button>
+            <button onClick={() => jump('consumer', ['home'], ['story', 'b1'])}>Stories</button>
+            <button onClick={() => jump('consumer', ['home'], ['viewer', 'r1'])}>Reels</button>
             <button onClick={() => jump('consumer', ['home'], ['viewer', 'dp1'])}>Photo dump</button>
             <button onClick={() => jump('consumer', ['home'], ['viewer', 'pv1'])}>Review post</button>
             <button onClick={() => jump('consumer', ['home'], ['offer', 'o1'])}>Offer</button>

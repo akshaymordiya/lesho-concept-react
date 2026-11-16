@@ -148,7 +148,9 @@ export function BusinessProfile({ param }) {
         </div>
         <div className="pad" style={{ marginTop: -32, position: 'relative' }}>
           <div className="between" style={{ alignItems: 'flex-end' }}>
-            <span className="avatar lg">{b.name[0]}</span>
+            {app.stories.some((x) => x.bizId === b.id)
+              ? <button className={`avatar lg ringed ${app.seenStories[b.id] ? 'seen' : ''}`} aria-label={`View ${b.name} story`} onClick={() => app.go('story', b.id)}>{b.name[0]}</button>
+              : <span className="avatar lg">{b.name[0]}</span>}
             <button className={`btn sm ${following ? 'ghost' : 'dark'}`} onClick={() => app.toggleFollow(b.id)}>{following ? <><UserCheck size={15} />Following</> : <><UserPlus size={15} />Follow</>}</button>
           </div>
           <div className="row" style={{ gap: 6, marginTop: 10 }}><h1 className="h2" style={{ fontSize: 20 }}>{b.name}</h1><Verified biz={b} size={20} /></div>

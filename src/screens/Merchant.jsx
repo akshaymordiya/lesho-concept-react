@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   Inbox, CheckCheck, Footprints, IndianRupee, ChevronRight, MousePointerClick, MessageSquareText, CalendarCheck, BadgeCheck, ArrowLeftRight, Search,
-  Film, Image as ImageIcon, Images, Tag, Megaphone, PartyPopper, Package, Plus, Pencil, Info, Check, Flag, AlertCircle, Eye, ArrowLeft, Link2, Play, Receipt,
+  Film, Image as ImageIcon, Images, Tag, Megaphone, PartyPopper, Package, Plus, Pencil, Info, Check, Flag, AlertCircle, Eye, ArrowLeft, Link2, Play, Receipt, Timer,
 } from 'lucide-react'
 import { useApp, Img, TopBar, Chip, Note, Sheet, Empty, Verified, inr, priceOf } from '../ui.jsx'
 import { ANALYTICS, PRICING, SAMPLE_MEDIA } from '../data.js'
@@ -265,7 +265,8 @@ export function MCatalogue() {
 const TYPES = [
   { id: 'product', label: 'Product', hint: 'Add a catalogue item', icon: Package },
   { id: 'reel', label: 'Reel', hint: 'Short vertical video', icon: Film },
-  { id: 'image', label: 'Image', hint: 'One photo, one story', icon: ImageIcon },
+  { id: 'story', label: 'Story', hint: 'Visible for 24 hours', icon: Timer },
+  { id: 'image', label: 'Image', hint: 'One photo, one moment', icon: ImageIcon },
   { id: 'dump', label: 'Photo dump', hint: 'A collection in one post', icon: Images },
   { id: 'offer', label: 'Offer', hint: 'Structured terms and validity', icon: Tag },
   { id: 'update', label: 'Business update', hint: 'Timings, branch, news', icon: Megaphone },
@@ -283,8 +284,8 @@ export function MCreate() {
   const items = app.products.filter((p) => p.bizId === ME)
   const T = TYPES.find((t) => t.id === type)
   const multi = type === 'dump'
-  const needsMedia = ['reel', 'image', 'dump', 'event'].includes(type)
-  const needsLink = ['reel', 'image', 'dump', 'offer'].includes(type)
+  const needsMedia = ['reel', 'story', 'image', 'dump', 'event'].includes(type)
+  const needsLink = ['reel', 'story', 'image', 'dump', 'offer'].includes(type)
   const bad = {
     title: d.title.trim().length < 4,
     media: needsMedia && (multi ? d.media.length < 2 : d.media.length < 1),
@@ -304,8 +305,11 @@ export function MCreate() {
       app.addOffer({ id, bizId: ME, title: d.title.trim(), short: 'New offer', valid: d.valid.trim(), products: d.links, branch: 'CG Road branch', min: 'See terms', limit: 'One per customer',
         steps: ['Claim the offer to get a Lesho reference', 'Show the reference at the billing counter', 'The store checks the code and applies the offer'], terms: (d.terms.trim() || 'Standard store terms apply').split('\n').filter(Boolean) })
       setDone({ go: ['offer', id], label: 'offer' })
+    } else if (type === 'story') {
+      app.addStory(ME, { img: d.media[0], text: d.title.trim(), time: 'Just now', link: { type: 'product', id: d.links[0] } })
+      setDone({ go: ['story', ME], label: 'story' })
     } else if (type === 'event') {
-      app.addEvent({ id, bizId: ME, name: d.title.trim(), type: 'Store event', date: d.date.trim(), day: (d.date.match(/\d+/) || ['—'])[0], mon: 'NOV', time: 'Timing shared by the store', venue: d.venue.trim(), area: 'nav',
+      app.addEvent({ id, bizId: ME, x: 0.4, y: -0.5, name: d.title.trim(), type: 'Store event', date: d.date.trim(), day: (d.date.match(/\d+/) || ['—'])[0], mon: 'NOV', time: 'Timing shared by the store', venue: d.venue.trim(), area: 'nav',
         price: Number(d.price) || 0, priceLabel: Number(d.price) ? `${inr(Number(d.price))} per person` : 'Free entry', img: d.media[0], imgs: d.media, rules: ['Details provided by the organiser'], capacity: 'Capacity not published', desc: d.caption.trim() || 'Details to be announced by the store.' })
       setDone({ go: ['event', id], label: 'event' })
     } else {
@@ -372,7 +376,7 @@ export function MCreate() {
             </>
           )}
 
-          <label className="field" style={{ marginTop: 16 }}><span className="lbl">{type === 'offer' ? 'Offer title' : type === 'event' ? 'Event name' : 'Title'}</span>
+          <label className="field" style={{ marginTop: 16 }}><span className="lbl">{type === 'offer' ? 'Offer title' : type === 'event' ? 'Event name' : type === 'story' ? 'Story text' : 'Title'}</span>
             <input className={`input ${tried && bad.title ? 'err' : ''}`} value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} maxLength={60}
               placeholder={type === 'offer' ? 'e.g. ₹300 off on blouse stitching' : type === 'event' ? 'e.g. Bridal trunk show' : type === 'update' ? 'e.g. Open till 10 pm this week' : 'e.g. New Chanderi arrivals'} />
             {tried && bad.title && <Err>Add a clear title of at least four characters.</Err>}</label>
@@ -393,9 +397,9 @@ export function MCreate() {
             </>
           )}
 
-          <label className="field" style={{ marginTop: 12 }}><span className="lbl">{type === 'offer' ? 'Terms and exclusions (one per line)' : type === 'event' ? 'Description' : 'Caption'}</span>
+          {type !== 'story' && <label className="field" style={{ marginTop: 12 }}><span className="lbl">{type === 'offer' ? 'Terms and exclusions (one per line)' : type === 'event' ? 'Description' : 'Caption'}</span>
             <textarea className="textarea" value={type === 'offer' ? d.terms : d.caption} onChange={(e) => setD({ ...d, [type === 'offer' ? 'terms' : 'caption']: e.target.value })} maxLength={300}
-              placeholder={type === 'offer' ? 'Not valid with other offers' : 'Describe what customers are seeing'} /></label>
+              placeholder={type === 'offer' ? 'Not valid with other offers' : 'Describe what customers are seeing'} /></label>}
 
           {type !== 'event' && (
             <>
@@ -431,7 +435,7 @@ export function MCreate() {
               </div>
               <div className="grow small">
                 <div className="b">How customers see it</div>
-                <p className="muted" style={{ marginTop: 4 }}>{d.caption || 'Your caption appears under the title.'}</p>
+                <p className="muted" style={{ marginTop: 4 }}>{type === 'story' ? 'Shown full-screen for 5 seconds in your story, for 24 hours.' : d.caption || 'Your caption appears under the title.'}</p>
                 <div className="tiny muted" style={{ marginTop: 8 }}>{type === 'event' ? `${d.date || 'Date'} · ${d.venue || 'Venue'}` : `${d.links.length} linked item${d.links.length === 1 ? '' : 's'}`}</div>
               </div>
             </div>
