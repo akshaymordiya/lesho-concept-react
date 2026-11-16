@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Bookmark, ChevronRight, Compass, LocateFixed, MapPin, Store, ArrowRight, Sparkles, Tag, Check, Settings, ShieldCheck, RotateCcw, Send, CalendarCheck, Ticket, ArrowLeft, Play, Images } from 'lucide-react'
-import { useApp, SaveBtn, Img, Empty, ProductRow, BizCard, EventCard, Chip, CatIcon, Note, Verified } from '../ui.jsx'
+import { Bookmark, ChevronRight, Compass, LocateFixed, MapPin, Store, ArrowRight, Sparkles, Tag, Check, Settings, ShieldCheck, RotateCcw, Send, CalendarCheck, Ticket, ArrowLeft, Play, Images, MessageSquareText } from 'lucide-react'
+import { useApp, SaveBtn, statusTone, isPast, Img, Empty, ProductRow, BizCard, EventCard, Chip, CatIcon, Note, Verified } from '../ui.jsx'
 import { CATS, USER, cat as catOf } from '../data.js'
 
 const TYPES = [['all', 'All'], ['product', 'Products'], ['biz', 'Businesses'], ['post', 'Posts'], ['offer', 'Offers'], ['event', 'Events']]
@@ -84,25 +84,35 @@ export function Profile() {
           </span>
         </button>
 
-        <div className="between" style={{ marginTop: 24, marginBottom: 8 }}><h2 className="h3" style={{ fontSize: 18 }}>Enquiries and references</h2><span className="tiny muted">{app.refs.length} total</span></div>
-        {app.refs.length === 0
-          ? <div className="card"><Empty icon={Send} title="No enquiries yet" text="When you enquire, plan a visit or claim an offer, the reference appears here." /></div>
-          : <div className="card" style={{ padding: '2px 14px' }}>
-            {app.refs.map((r) => {
-              const I = REF_ICON[r.kind] || Send, lead = app.leads.find((l) => l.id === r.id)
+        <div className="between" style={{ marginTop: 24, marginBottom: 8 }}><h2 className="h3" style={{ fontSize: 18 }}>Enquiries and messages</h2><button className="link" onClick={() => app.go('activity', 'enquiries')}>View all<ChevronRight size={15} /></button></div>
+        <div className="grid2" style={{ gap: 10 }}>
+          <button className="stat" onClick={() => app.go('activity', 'enquiries')}>
+            <span className="between"><span className="ic" style={{ background: 'var(--blue-50)', color: 'var(--blue-deep)' }}><Send size={17} /></span><ChevronRight size={16} color="var(--faint)" /></span>
+            <div className="num">{app.refs.filter((r) => !isPast(app.refStatus(r))).length}</div><div className="tiny muted">Active enquiries · {app.refs.length} in total</div>
+          </button>
+          <button className="stat" onClick={() => app.go('activity', 'messages')}>
+            <span className="between"><span className="ic" style={{ background: 'var(--orange-50)', color: 'var(--orange-ink)' }}><MessageSquareText size={17} /></span><ChevronRight size={16} color="var(--faint)" /></span>
+            <div className="num">{app.unreadTotal('consumer')}</div><div className="tiny muted">Unread messages from shops</div>
+          </button>
+        </div>
+        {app.refs.length > 0 && (
+          <div className="card" style={{ padding: '2px 14px', marginTop: 10 }}>
+            {app.refs.slice(0, 2).map((r) => {
+              const I = REF_ICON[r.kind] || Send, st = app.refStatus(r)
               return (
                 <button key={r.id} className="listrow" onClick={() => app.go('ref', r.id)}>
                   <span className={`kind ${r.kind === 'enquiry' ? 'enquiry' : 'intent'}`}><I size={17} /></span>
                   <span className="grow">
                     <span className="b small clamp1" style={{ display: 'block' }}>{r.typeLabel} · {app.biz(r.bizId).name}</span>
                     <span className="tiny muted clamp1" style={{ display: 'block' }}>{r.id} · {r.created}</span>
-                    <span className="badge blue" style={{ marginTop: 5 }}>{lead && lead.status !== 'New' ? lead.status : r.status}</span>
+                    <span className={`badge ${statusTone(st)}`} style={{ marginTop: 5 }}>{st}</span>
                   </span>
                   <ChevronRight size={18} color="var(--faint)" />
                 </button>
               )
             })}
-          </div>}
+          </div>
+        )}
 
         <h2 className="h3" style={{ fontSize: 18, marginTop: 24, marginBottom: 8 }}>Preferences</h2>
         <div className="card" style={{ padding: '2px 16px' }}>

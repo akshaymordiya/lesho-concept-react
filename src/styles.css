@@ -475,3 +475,26 @@ table.cmp tr:first-child td, table.cmp tr:first-child th { border-top: 0; }
 .mcard .mini button { flex: 1; min-width: 0; text-align: left; }
 .mcard .mini .img { aspect-ratio: 1; border-radius: 10px; }
 .mapnote { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; background: rgba(23, 25, 29, .86); color: #fff; padding: 10px 14px; border-radius: var(--r-md); font-size: 13px; font-weight: 600; text-align: center; width: max-content; max-width: 80%; }
+
+/* ---------- Enquiries, inbox and chat ---------- */
+.enq { background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px; }
+.enq + .enq { margin-top: 10px; }
+.qrbtn { position: relative; flex: none; border-radius: 12px; transition: transform .12s; }
+.qrbtn:active { transform: scale(.94); }
+.qrbtn .mockcode { margin: 0; }
+.qrbtn .zoom { position: absolute; right: -5px; bottom: -5px; width: 20px; height: 20px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; border: 2px solid #fff; }
+.scrim.centre { align-items: center; justify-content: center; padding: 20px; }
+.popover { position: relative; width: 100%; max-width: 320px; background: #fff; border-radius: var(--r-xl); padding: 26px 20px 20px; text-align: center; animation: pop .28s var(--ease); box-shadow: var(--shadow-3); }
+.unread { min-width: 20px; height: 20px; border-radius: 10px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; padding: 0 6px; flex: none; }
+.bubble.ai.white { background: #fff; border: 1px solid var(--border); }
+.sysmsg { align-self: center; font-size: 11.5px; font-weight: 600; color: var(--muted); background: rgba(23, 25, 29, .05); padding: 5px 12px; border-radius: var(--r-pill); text-align: center; max-width: 92%; }
+.sysmsg span { font-weight: 500; color: var(--faint); }
+.msgtime { font-size: 11px; color: var(--faint); margin-top: -6px; padding: 0 4px; align-self: flex-start; }
+.msgtime.mine { align-self: flex-end; }
+.demoswap { align-self: center; margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--blue-deep); background: var(--blue-50); padding: 0 12px; min-height: 36px; border-radius: var(--r-pill); }
+.chatbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px 0 16px; background: rgba(246, 247, 249, .96); backdrop-filter: blur(10px); border-top: 1px solid var(--border); }
+.chatbar form { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--border); border-radius: var(--r-pill); padding: 4px 4px 4px 18px; margin: 0 16px; }
+.chatbar form:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-100); }
+.chatbar input { flex: 1; border: 0; outline: 0; height: 44px; font-size: 14.5px; min-width: 0; background: transparent; }
+.homebtn { position: relative; }
+.homebtn .unread { position: absolute; top: -4px; right: -4px; border: 2px solid #fff; height: 22px; min-width: 22px; background: var(--orange); color: var(--ink); }

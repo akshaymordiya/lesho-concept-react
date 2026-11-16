@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { useApp, Img, TopBar, Chip, Note, Sheet, Empty, Verified, inr, priceOf } from '../ui.jsx'
 import { ANALYTICS, PRICING, SAMPLE_MEDIA } from '../data.js'
+import { ConversationList } from './Activity.jsx'
 
 const ME = 'b1'
 const KIND = {
@@ -28,7 +29,7 @@ function LeadCard({ l }) {
           <span className="between"><span className="b small clamp1">{l.typeLabel}</span><span className={`badge ${statusTone(l.status)}`}>{l.status}</span></span>
           <span className="small clamp1" style={{ display: 'block', marginTop: 2 }}>{l.subject}</span>
           <span className="tiny muted clamp1" style={{ display: 'block', marginTop: 4 }}>{l.consumer} · via {l.source} · {l.created}</span>
-          <span className="row" style={{ marginTop: 8, gap: 6 }}><span className="badge grey">{K.label}</span><span className="badge grey">{billLabel(l)}</span></span>
+          <span className="row" style={{ marginTop: 8, gap: 6 }}><span className="badge grey">{K.label}</span><span className="badge grey">{billLabel(l)}</span>{app.unreadFor('merchant', l.id) > 0 && <span className="badge blue"><MessageSquareText size={11} />{app.unreadFor('merchant', l.id)} new</span>}</span>
         </span>
       </span>
     </button>
@@ -111,16 +112,28 @@ export function MDashboard() {
   )
 }
 
-export function MLeads() {
+export function MLeads({ param }) {
   const app = useApp()
   const [f, setF] = useState('all')
+  const [tab, setTab] = useState(param === 'messages' ? 'messages' : 'leads')
+  const unread = app.unreadTotal('merchant')
   const list = app.leads.filter((l) => f === 'all' || l.kind === f)
   return (
     <div className="screen tabbed grey">
       <div className="pad" style={{ paddingTop: 14 }}>
         <h1 className="h1" style={{ fontSize: 22 }}>Lead inbox</h1>
         <p className="small muted" style={{ marginTop: 2 }}>Rangoli Silks · CG Road branch</p>
+        <div className="seg" role="tablist" style={{ marginTop: 12 }}>
+          <button role="tab" aria-selected={tab === 'leads'} className={tab === 'leads' ? 'on' : ''} onClick={() => setTab('leads')}>Leads · {app.leads.length}</button>
+          <button role="tab" aria-selected={tab === 'messages'} className={tab === 'messages' ? 'on' : ''} onClick={() => setTab('messages')}>Messages{unread > 0 && <span className="unread">{unread}</span>}</button>
+        </div>
       </div>
+      {tab === 'messages' ? (
+        <div className="pad" style={{ marginTop: 12 }}>
+          <ConversationList side="merchant" />
+          <div style={{ marginTop: 12 }}><Note icon={Info}>You can message a customer only after they contact you. Replying here marks the lead as contacted.</Note></div>
+        </div>
+      ) : <>
       <div className="hscroll tight" style={{ marginTop: 12 }}>
         <Chip on={f === 'all'} onClick={() => setF('all')}>All {app.leads.length}</Chip>
         {Object.entries(KIND).map(([k, v]) => <Chip key={k} on={f === k} onClick={() => setF(k)}><v.icon size={14} />{{ click: 'Clicks', enquiry: 'Enquiries', intent: 'Intents', verified: 'Verified' }[k]} {app.leads.filter((l) => l.kind === k).length}</Chip>)}
@@ -129,6 +142,7 @@ export function MLeads() {
         {f !== 'all' && <div style={{ marginBottom: 10 }}><Note icon={Info}>{KIND[f].hint}</Note></div>}
         {list.length ? list.map((l) => <LeadCard key={l.id} l={l} />) : <Empty icon={Inbox} title="Nothing here" text="Leads of this type will appear as customers reach out." />}
       </div>
+      </>}
     </div>
   )
 }
@@ -167,6 +181,12 @@ export function MLeadDetail({ param }) {
             {l.details?.length > 0 && <div className="wrap" style={{ marginTop: 10, gap: 6 }}>{l.details.map((d) => <span key={d} className="badge grey" style={{ fontSize: 12, padding: '5px 10px' }}>{d}</span>)}</div>}
             {l.note && <p className="small" style={{ marginTop: 10 }}>{isClick || /duplicate/i.test(l.status) ? l.note : `“${l.note}”`}</p>}
           </div>
+        )}
+
+        {!isClick && (
+          <button className="btn dark block" style={{ marginTop: 12 }} onClick={() => app.go('chat', l.id)}>
+            <MessageSquareText size={18} />{app.unreadFor('merchant', l.id) > 0 ? `Read ${app.unreadFor('merchant', l.id)} new message${app.unreadFor('merchant', l.id) > 1 ? 's' : ''}` : `Message ${l.consumer.split(' ')[0]}`}
+          </button>
         )}
 
         {isClick ? (

@@ -280,7 +280,7 @@ export function ReviewCard({ r, showTarget }) {
 }
 
 /* Decorative, deterministic QR-like pattern. Not a scannable code. */
-export function MockCode({ seed }) {
+export function MockCode({ seed, size }) {
   let h = 0
   for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0
   const cells = []
@@ -297,5 +297,11 @@ export function MockCode({ seed }) {
     h = (h * 1103515245 + 12345) >>> 0
     cells.push(f != null ? f : (h >> 16) & 1)
   }
-  return <div className="mockcode" aria-label="Decorative reference pattern">{cells.map((f, i) => <i key={i} className={f ? 'f' : ''} />)}</div>
+  const st = size ? { width: size, height: size, padding: Math.max(4, Math.round(size * 0.07)), gap: size < 90 ? 1 : size > 190 ? 3 : 2, borderRadius: size < 90 ? 10 : 14 } : undefined
+  return <div className="mockcode" style={st} aria-label="Decorative reference pattern">{cells.map((f, i) => <i key={i} className={f ? 'f' : ''} />)}</div>
 }
+
+/* Enquiry status helpers shared by the consumer activity screens. */
+const notYet = (s) => /not yet/i.test(s)
+export const statusTone = (s) => !notYet(s) && /Visited|redeemed|Attended|Converted|confirmed/i.test(s) ? 'green' : /Expired|Cancelled|Invalid|Not interested|Unreachable|Disputed/i.test(s) ? 'grey' : 'blue'
+export const isPast = (s) => !notYet(s) && /Visited|redeemed|Attended|Converted|Expired|Cancelled|Invalid|Not interested/i.test(s)

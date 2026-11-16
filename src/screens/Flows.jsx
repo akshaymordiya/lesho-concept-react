@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Check, Minus, Plus, Info, AlertCircle, Copy, MapPin, LocateFixed, Camera, Star, CalendarCheck, Ticket, Tag, Send, ShieldCheck, X } from 'lucide-react'
+import { Check, Minus, Plus, Info, AlertCircle, Copy, MapPin, LocateFixed, Camera, Star, CalendarCheck, Ticket, Tag, Send, ShieldCheck, X, MessageSquareText } from 'lucide-react'
 import { useApp, Sheet, Chip, Note, CheckRow, TopBar, MockCode, Img, Verified } from '../ui.jsx'
 import { cat as catOf, SAMPLE_MEDIA, USER } from '../data.js'
 
@@ -206,8 +206,11 @@ export function RefConfirm({ param }) {
         <div style={{ marginTop: 12 }}><Note tone="onDark" icon={ShieldCheck}>Only the details you agreed to share were sent. {b.name} cannot see your live location or browsing history.</Note></div>
 
         <div className="row" style={{ marginTop: 18 }}>
-          <button className="btn onDark grow" style={{ background: 'rgba(255,255,255,.12)', color: '#fff' }} onClick={() => app.tab('profile')}>My enquiries</button>
+          <button className="btn onDark grow" style={{ background: 'rgba(255,255,255,.12)', color: '#fff' }} onClick={() => app.go('chat', r.id)}><MessageSquareText size={17} />Message</button>
           <button className="btn light grow" onClick={app.back}>Done</button>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 6 }}>
+          <button className="link" style={{ color: 'rgba(255,255,255,.8)' }} onClick={() => app.go('activity', 'enquiries')}>All my enquiries</button>
         </div>
       </div>
     </div>

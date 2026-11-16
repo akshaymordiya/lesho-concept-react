@@ -344,6 +344,16 @@ export const SEED_REFS = [
     status: 'Contacted', details: ['Best price', 'Exchange value'], note: 'Exchanging a 3-year-old phone.' },
   { id: 'LSH-VIS-9KD31', kind: 'visit', typeLabel: 'Visit request', bizId: 'b5', subject: 'Madras Tiffin Room', created: '8 Nov, 8:05 am',
     status: 'Visited — merchant-confirmed', details: ['Sun, 8 Nov', '9:00 – 9:30 am', '3 people'], note: '' },
+  { id: 'LSH-APT-6H2RD', kind: 'enquiry', typeLabel: 'Appointment request', bizId: 'b8', subject: 'Balayage hair colour', created: '12 Nov, 6:20 pm',
+    status: 'Appointment confirmed', details: ['Shoulder length', 'Saturday'], note: 'Shoulder-length hair, first visit.' },
+  { id: 'LSH-CON-5J9TQ', kind: 'enquiry', typeLabel: 'Showroom consultation request', bizId: 'b10', subject: 'Sienna 3-seater leather sofa', created: '10 Nov, 1:15 pm',
+    status: 'Sent to business', details: ['Dimensions', 'Fabric / material'], note: 'Need a 3-seater for a 12 ft wall.' },
+  { id: 'LSH-OFR-7C4PN', kind: 'offer', typeLabel: 'Offer claim', bizId: 'b13', offerId: 'o4', subject: 'AC service at ₹399 this month', created: '5 Nov, 10:30 am',
+    status: 'Offer redeemed', details: ['Valid till 30 Nov 2026', 'West Ahmedabad service area'], note: '' },
+  { id: 'LSH-CBK-8N3VZ', kind: 'enquiry', typeLabel: 'Callback request', bizId: 'b11', subject: 'Periodic car service package', created: '28 Oct, 9:40 am',
+    status: 'Expired — no response', details: ['This weekend'], note: '2021 hatchback, 28,000 km.' },
+  { id: 'LSH-EVT-2W8KX', kind: 'event', typeLabel: 'Ticket request', bizId: 'b7', subject: 'Sabarmati Sessions: October edition', created: '9 Oct, 7:55 pm',
+    status: 'Attended — organiser-confirmed', details: ['2 tickets'], note: '' },
 ]
 
 // Merchant demo: Rangoli Silks (b1). kind distinguishes clicks, enquiries, intents and verified outcomes.
@@ -421,3 +431,67 @@ export const STORIES = [
     { img: '1517836357463-d25dfeac3438', text: '6 am strength class — trial slots open this week', time: '9h ago', link: { type: 'product', id: 'f2' } },
   ] },
 ]
+
+// In-app conversations, keyed by reference id. Shared by the customer and the business for the same enquiry.
+const M = (from, text, time, ts) => ({ from, text, time, ts })
+export const SEED_CHATS = {
+  'LSH-QUO-4T7M2': [
+    M('system', 'Quotation request sent · LSH-QUO-4T7M2', '11 Nov, 4:10 pm', 1),
+    M('consumer', 'Exchanging a 3-year-old phone in good condition. Looking for your best price with exchange value.', '11 Nov, 4:10 pm', 2),
+    M('merchant', 'Hello Aarav, thanks for the enquiry. The Aura N5 5G 8/128 is ₹24,999. With your exchange we can take off about ₹4,500 once we check the phone in store.', '11 Nov, 4:42 pm', 3),
+    M('merchant', 'Your written quote is ready at the counter and valid till 18 Nov. Please bring your Lesho reference.', '12 Nov, 11:05 am', 40),
+  ],
+  'LSH-VIS-9KD31': [
+    M('system', 'Visit request sent · LSH-VIS-9KD31', '8 Nov, 8:05 am', 4),
+    M('consumer', 'Planning to come for breakfast, three of us.', '8 Nov, 8:05 am', 5),
+    M('merchant', 'Welcome! We don\'t hold tables in the morning, but 9 am is usually comfortable.', '8 Nov, 8:12 am', 6),
+    M('system', 'Visit confirmed by the restaurant', '8 Nov, 9:20 am', 7),
+  ],
+  'LSH-APT-6H2RD': [
+    M('system', 'Appointment request sent · LSH-APT-6H2RD', '12 Nov, 6:20 pm', 8),
+    M('consumer', 'Shoulder-length hair, first visit. Saturday would be ideal.', '12 Nov, 6:20 pm', 9),
+    M('merchant', 'Hi Aarav! We can do Saturday 21 Nov at 11:30 am with Riya. Shall we hold it?', '12 Nov, 6:48 pm', 10),
+    M('consumer', 'Yes please.', '12 Nov, 6:50 pm', 11),
+    M('merchant', 'Done — you\'re booked for Sat 21 Nov, 11:30 am. Please come 10 minutes early for the patch test.', '13 Nov, 10:02 am', 41),
+  ],
+  'LSH-CON-5J9TQ': [
+    M('system', 'Showroom consultation request sent · LSH-CON-5J9TQ', '10 Nov, 1:15 pm', 12),
+    M('consumer', 'Need a 3-seater for a 12 ft wall. I\'d like to see the leather options.', '10 Nov, 1:15 pm', 13),
+  ],
+  'LSH-OFR-7C4PN': [
+    M('system', 'Offer claimed · LSH-OFR-7C4PN', '5 Nov, 10:30 am', 14),
+    M('merchant', 'Thanks for claiming. Our technician will verify the code on arrival.', '5 Nov, 10:41 am', 15),
+    M('system', 'Offer redeemed — code checked by the technician', '6 Nov, 3:10 pm', 16),
+  ],
+  // Rangoli Silks (merchant demo) — customer conversations
+  'LSH-ENQ-7Q2X8': [
+    M('system', 'Availability enquiry received · via AI guide result', 'Today, 5:48 pm', 30),
+    M('consumer', 'Is the bottle green available? Need it by 20 Nov.', 'Today, 5:48 pm', 42),
+  ],
+  'LSH-VIS-3M9P4': [
+    M('system', 'Store-visit intent received · via Photo dump', 'Today, 2:15 pm', 20),
+    M('consumer', 'Coming with my mother to see the Paithani border sarees.', 'Today, 2:15 pm', 21),
+    M('merchant', 'Lovely, see you Saturday around 5. We\'ll keep the aubergine and navy pieces ready.', 'Today, 2:31 pm', 22),
+  ],
+  'LSH-ENQ-8R4W6': [
+    M('system', 'Product enquiry received · via Reel', '11 Nov, 7:20 pm', 17),
+    M('consumer', 'Can the blouse be altered to size 36?', '11 Nov, 7:20 pm', 18),
+    M('merchant', 'Yes, alterations are done in store within two days.', '11 Nov, 7:52 pm', 19),
+    M('consumer', 'Great — what would the alteration cost?', '12 Nov, 9:14 am', 39),
+  ],
+}
+// How many messages each side has already seen (the rest show as unread).
+export const SEED_READ = {
+  consumer: { 'LSH-QUO-4T7M2': 3, 'LSH-VIS-9KD31': 4, 'LSH-APT-6H2RD': 4, 'LSH-CON-5J9TQ': 2, 'LSH-OFR-7C4PN': 3 },
+  merchant: { 'LSH-ENQ-7Q2X8': 1, 'LSH-VIS-3M9P4': 3, 'LSH-ENQ-8R4W6': 3 },
+}
+export const AUTO_REPLY = {
+  QUO: 'Thanks for writing in. We\'ll confirm the best price here by this evening — please keep your reference handy.',
+  VIS: 'Noted, thank you. We don\'t hold tables, but we\'ll look out for you around that time.',
+  APT: 'Thanks! We\'ll check the calendar and confirm your slot here shortly.',
+  EVT: 'Thanks for your interest. We\'ll share availability and payment steps here.',
+  OFR: 'Your claim is noted. Show the reference at the counter and we\'ll apply the offer.',
+  any: 'Thanks for your message. Someone from the team will reply here shortly.',
+  next: 'Got it — we\'ll get back to you on this today.',
+  consumer: 'Thank you, that helps! I\'ll come by with my Lesho reference.',
+}

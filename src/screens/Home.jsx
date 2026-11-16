@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { MapPin, ChevronDown, Search, Sparkles, ArrowUp, Bell, Images, MapPinOff, Info } from 'lucide-react'
+import { MapPin, ChevronDown, Search, Sparkles, ArrowUp, MessageSquareText, Images, MapPinOff, Info } from 'lucide-react'
 import { useApp, Img, SectionHead, ProductCard, BizCard, EventCard, OfferCard, PostTile, ReviewCard, CatIcon, Verified, Empty, Note } from '../ui.jsx'
 import { CATS, USER } from '../data.js'
 
@@ -33,7 +33,9 @@ export default function Home() {
               <span className="b row" style={{ gap: 3, fontSize: 14.5 }}>{area.name}, {area.city}<ChevronDown size={15} /></span>
             </span>
           </button>
-          <button className="icon-btn" aria-label="Notifications" onClick={() => app.toast('No new notifications')}><Bell size={19} strokeWidth={1.8} /></button>
+          <button className="icon-btn homebtn" aria-label={`Enquiries and messages${app.unreadTotal('consumer') ? `, ${app.unreadTotal('consumer')} unread` : ''}`} onClick={() => app.go('activity', 'enquiries')}>
+            <MessageSquareText size={19} strokeWidth={1.8} />{app.unreadTotal('consumer') > 0 && <span className="unread">{app.unreadTotal('consumer')}</span>}
+          </button>
         </div>
         <h1 className="h1" style={{ marginTop: 14, fontSize: 21 }}>Namaste, {USER.name}.<br /><span style={{ color: 'var(--faint)' }}>What's good nearby?</span></h1>
         <form className="search" style={{ marginTop: 16 }} onSubmit={goSearch} role="search">

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Home as HomeIcon, Compass, Sparkles, Bookmark, User, LayoutDashboard, Inbox, PlusCircle, Package, BarChart3, Signal, Wifi, BatteryFull } from 'lucide-react'
 import { Ctx } from './ui.jsx'
-import { AREAS, BUSINESSES, PRODUCTS, EVENTS, OFFERS, REVIEWS, POSTS, SEED_REFS, SEED_LEADS, STORIES } from './data.js'
+import { AREAS, BUSINESSES, PRODUCTS, EVENTS, OFFERS, REVIEWS, POSTS, SEED_REFS, SEED_LEADS, STORIES, SEED_CHATS, SEED_READ, AUTO_REPLY } from './data.js'
 import Home from './screens/Home.jsx'
 import Guide from './screens/Guide.jsx'
 import Explore from './screens/Explore.jsx'
@@ -9,11 +9,12 @@ import { ProductDetail, BusinessProfile, EventDetail, OfferDetail } from './scre
 import Viewer, { StoryViewer } from './screens/Viewer.jsx'
 import { LeadSheet, VisitIntent, RefConfirm, ReviewComposer, AreaSheet } from './screens/Flows.jsx'
 import { Saved, Profile, Onboarding } from './screens/Me.jsx'
+import { Activity, Chat, QrPopover } from './screens/Activity.jsx'
 import { MDashboard, MLeads, MLeadDetail, MCreate, MCatalogue, MAnalytics } from './screens/Merchant.jsx'
 
 const SCREENS = {
   home: Home, explore: Explore, guide: Guide, saved: Saved, profile: Profile,
-  product: ProductDetail, biz: BusinessProfile, event: EventDetail, offer: OfferDetail, viewer: Viewer, story: StoryViewer, visit: VisitIntent, ref: RefConfirm,
+  product: ProductDetail, biz: BusinessProfile, event: EventDetail, offer: OfferDetail, viewer: Viewer, story: StoryViewer, activity: Activity, chat: Chat, visit: VisitIntent, ref: RefConfirm,
   mdash: MDashboard, mleads: MLeads, mlead: MLeadDetail, mcreate: MCreate, mcat: MCatalogue, manalytics: MAnalytics,
 }
 const C_TABS = [['home', 'Home', HomeIcon], ['explore', 'Explore', Compass], ['guide', 'Guide', Sparkles], ['saved', 'Saved', Bookmark], ['profile', 'You', User]]
@@ -59,6 +60,11 @@ export default function App() {
   const [guideSeed, setGuideSeed] = useState(null)
   const [exploreSeed, setExploreSeed] = useState(null)
   const toastT = useRef()
+  const [chats, setChats] = useState(SEED_CHATS)
+  const [lastRead, setLastRead] = useState(SEED_READ)
+  const [typing, setTyping] = useState({})
+  const tsRef = useRef(1000), autoDone = useRef({}), timers = useRef([])
+  useEffect(() => () => timers.current.forEach(clearTimeout), [])
 
   const toast = useCallback((msg) => {
     setToastMsg(msg); clearTimeout(toastT.current)
@@ -75,6 +81,9 @@ export default function App() {
 
   const app = useMemo(() => {
     const biz = (id) => BUSINESSES.find((b) => b.id === id)
+    const pushMsg = (id, msg) => setChats((c) => ({ ...c, [id]: [...(c[id] || []), { time: 'Just now', ...msg, ts: ++tsRef.current }] }))
+    const unreadFor = (side, id) => (chats[id] || []).slice(lastRead[side]?.[id] || 0).filter((m) => m.from !== side && m.from !== 'system').length
+    const later = (fn, ms) => timers.current.push(setTimeout(fn, ms))
     const distOf = (b) => area.remote ? null : Math.max(0.3, Math.hypot(b.x - area.x, b.y - area.y) * 1.25)
     return {
       mode, area, areas: AREAS, businesses: BUSINESSES, events, stories, seenStories, sheetOpen: !!sheet, products, posts, offers, reviews, refs, leads, prefs, saved, following,
@@ -101,8 +110,43 @@ export default function App() {
       openReview: (target) => setSheet({ type: 'review', target }),
       openArea: () => setSheet({ type: 'area' }),
       // Creates a consumer reference; leads for the demo merchant (b1) also land in the merchant inbox.
+      // ----- In-app messaging: one thread per enquiry, shared by customer and business -----
+      chats, typing, unreadFor,
+      unreadTotal: (side) => (side === 'merchant' ? leads : refs).reduce((n, x) => n + unreadFor(side, x.id), 0),
+      refStatus: (r) => { const l = leads.find((x) => x.id === r.id); return l && l.status !== 'New' ? l.status : r.status },
+      markRead: (side, id) => { const n = (chats[id] || []).length; if ((lastRead[side]?.[id] || 0) !== n) setLastRead((x) => ({ ...x, [side]: { ...x[side], [id]: n } })) },
+      sendMessage: (id, from, text) => {
+        pushMsg(id, { from, text })
+        if (from === 'consumer') {
+          const ref = refs.find((x) => x.id === id)
+          // Businesses other than the demo merchant answer with a simulated reply.
+          if (ref && ref.bizId !== 'b1') {
+            const replied = (chats[id] || []).some((m) => m.from === 'merchant' && m.auto)
+            setTyping((t) => ({ ...t, [id]: 'merchant' }))
+            later(() => {
+              pushMsg(id, { from: 'merchant', auto: true, text: replied ? AUTO_REPLY.next : AUTO_REPLY[id.split('-')[1]] || AUTO_REPLY.any })
+              setTyping((t) => ({ ...t, [id]: null }))
+              setRefs((rs) => rs.map((x) => (x.id === id && x.status === 'Sent to business' ? { ...x, status: 'Contacted' } : x)))
+            }, 1700)
+          }
+        } else {
+          const lead = leads.find((x) => x.id === id)
+          if (!lead) return
+          // A reply through Lesho is evidence the business contacted the customer.
+          if (/^(New|Acknowledged)$/.test(lead.status)) setLeads((ls) => ls.map((x) => (x.id === id ? { ...x, status: 'Contacted', billable: x.kind === 'enquiry' ? 'yes' : x.billable } : x)))
+          if (lead.consumer !== 'Aarav M.' && !autoDone.current[id]) {
+            autoDone.current[id] = true
+            setTyping((t) => ({ ...t, [id]: 'consumer' }))
+            later(() => { pushMsg(id, { from: 'consumer', auto: true, text: AUTO_REPLY.consumer }); setTyping((t) => ({ ...t, [id]: null })) }, 1900)
+          }
+        }
+      },
       addRef: (r) => {
         const id = `LSH-${r.prefix}-${rid()}`
+        // Offer claims and visit requests carry their details on the reference; only a written note starts the conversation.
+        const first = r.note || (r.kind === 'enquiry' || r.kind === 'event' ? (r.details || []).join(' · ') : '')
+        setChats((c) => ({ ...c, [id]: [{ from: 'system', text: `${r.typeLabel} sent · ${id}`, time: 'Just now', ts: ++tsRef.current }, ...(first ? [{ from: 'consumer', text: first, time: 'Just now', ts: ++tsRef.current }] : [])] }))
+        setLastRead((x) => ({ ...x, consumer: { ...x.consumer, [id]: first ? 2 : 1 }, merchant: { ...x.merchant, [id]: 1 } }))
         const ref = { ...r, id, created: 'Today, just now', status: r.status || 'Sent to business' }
         setRefs((x) => [ref, ...x])
         if (r.bizId === 'b1') setLeads((l) => [{ id, kind: r.kind === 'enquiry' ? 'enquiry' : 'intent', typeLabel: r.typeLabel, consumer: 'Aarav M.', subject: r.subject,
@@ -126,7 +170,7 @@ export default function App() {
       addReview: (r) => setReviews((rs) => [r, ...rs]),
       restartOnboarding: () => { setStack([entry('home')]); setOnboarding(true) },
     }
-  }, [mode, area, products, posts, offers, events, stories, seenStories, sheet, reviews, refs, leads, prefs, saved, liked, following, guideSeed, exploreSeed, toast])
+  }, [mode, area, products, posts, offers, events, stories, seenStories, sheet, chats, lastRead, typing, reviews, refs, leads, prefs, saved, liked, following, guideSeed, exploreSeed, toast])
 
   const jump = (m, ...path) => {
     setOnboarding(false); setSheet(null); setModeRaw(m)
@@ -134,7 +178,7 @@ export default function App() {
   }
   const tabs = mode === 'merchant' ? M_TABS : C_TABS
   const showNav = TAB_NAMES.has(top.name) && !onboarding && !(navHidden && top.name === 'mcreate')
-  const newLeads = leads.filter((l) => l.status === 'New').length
+  const newLeads = leads.filter((l) => l.status === 'New').length + app.unreadTotal('merchant')
   const darkBar = onboarding || DARK_TOP.has(top.name)
 
   return (
@@ -164,6 +208,9 @@ export default function App() {
             <button onClick={() => jump('consumer', ['home'], ['biz', 'b4'])}>Restaurant</button>
             <button onClick={() => jump('consumer', ['home'], ['biz', 'b4'], ['visit', 'b4'])}>Visit intent</button>
             <button onClick={() => jump('consumer', ['home'], ['event', 'ev1'])}>Event</button>
+            <button onClick={() => jump('consumer', ['home'], ['activity', 'enquiries'])}>Enquiries</button>
+            <button onClick={() => jump('consumer', ['home'], ['activity', 'messages'])}>Messages</button>
+            <button onClick={() => jump('consumer', ['home'], ['activity', 'messages'], ['chat', 'LSH-QUO-4T7M2'])}>Chat</button>
             <button onClick={() => jump('consumer', ['saved'])}>Saved</button>
             <button onClick={() => jump('consumer', ['profile'])}>Profile</button>
           </div>
@@ -171,6 +218,7 @@ export default function App() {
           <div className="jump">
             <button onClick={() => jump('merchant', ['mdash'])}>Dashboard</button>
             <button onClick={() => jump('merchant', ['mleads'])}>Lead inbox</button>
+            <button onClick={() => jump('merchant', ['mleads'], ['chat', 'LSH-ENQ-7Q2X8'])}>Customer chat</button>
             <button onClick={() => jump('merchant', ['mcreate'])}>Create content</button>
             <button onClick={() => jump('merchant', ['mcat'])}>Catalogue</button>
             <button onClick={() => jump('merchant', ['manalytics'])}>Analytics</button>
@@ -204,6 +252,7 @@ export default function App() {
               {sheet?.type === 'lead' && <LeadSheet cfg={sheet} />}
               {sheet?.type === 'review' && <ReviewComposer target={sheet.target} />}
               {sheet?.type === 'area' && <AreaSheet />}
+              {sheet?.type === 'qr' && <QrPopover id={sheet.id} />}
               {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
             </div>
           </div>
