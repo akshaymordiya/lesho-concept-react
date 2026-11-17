@@ -2,6 +2,8 @@
 
 Version 1, written from the concept prototype in `concept/` and the product definition in `concept/LESHO_PRODUCT_CONCEPT_AND_FABLE5_PROMPT.md`.
 
+The prototype lives in https://github.com/akshaymordiya/lesho-concept-react. Paths such as `concept/src/styles.css` in these docs are relative to that repository's root.
+
 These documents are the build specification. An engineer or agent should be able to pick up any task in `06-backend-tasks.md` or `07-frontend-tasks.md` and find every rule, field and payload it needs here.
 
 ## Reading order
