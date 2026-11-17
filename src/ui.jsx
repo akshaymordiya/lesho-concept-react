@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from 'react'
 import {
   Shirt, UtensilsCrossed, PartyPopper, Scissors, Smartphone, Sofa, Car, Dumbbell, Wrench,
-  Star, Bookmark, BadgeCheck, ArrowLeft, X, Check, MapPin, Play, Images, Tag, ChevronRight, Store, ImageOff, Megaphone, MessageSquareQuote,
+  Star, Bookmark, BadgeCheck, ArrowLeft, X, Check, MapPin, Play, Images, Tag, ChevronRight, Store, ImageOff, Megaphone, MessageSquareQuote, KeyRound,
 } from 'lucide-react'
 import { cat as catOf } from './data.js'
 
@@ -9,7 +9,8 @@ export const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
 
 export const inr = (n) => '₹' + Number(n).toLocaleString('en-IN')
-export const priceOf = (p) => (p.priceNote === 'from' ? 'From ' : '') + inr(p.price) + (p.priceNote && p.priceNote !== 'from' ? ' ' + p.priceNote : '')
+export const rentRate = (p) => `${inr(p.rent.rate)}/${p.rent.unit}`
+export const priceOf = (p) => p.rent && p.sale === false ? rentRate(p) : (p.priceNote === 'from' ? 'From ' : '') + inr(p.price) + (p.priceNote && p.priceNote !== 'from' ? ' ' + p.priceNote : '')
 
 const CAT_ICONS = { Shirt, UtensilsCrossed, PartyPopper, Scissors, Smartphone, Sofa, Car, Dumbbell, Wrench }
 export function CatIcon({ id, size = 20 }) {
@@ -132,10 +133,12 @@ export function ProductCard({ p, grid }) {
       <Img id={p.img} w={400} alt={p.name}>
         <span className="save"><SaveBtn type="product" id={p.id} /></span>
         {offer && <span className="badge orange" style={{ position: 'absolute', left: 8, bottom: 8 }}><Tag size={11} />{offer.short}</span>}
+        {p.rent && <span className="badge dark" style={{ position: 'absolute', left: 8, top: 8 }}><KeyRound size={11} />{p.sale === false ? 'Rent' : 'Buy or rent'}</span>}
       </Img>
       <div className="meta">
         <div className="name clamp2">{p.name}</div>
         <div className="price" style={{ marginTop: 3 }}>{priceOf(p)}</div>
+        {p.rent && p.sale !== false && <div className="tiny b" style={{ color: 'var(--blue-deep)' }}>or rent {rentRate(p)}</div>}
         <div className="tiny muted clamp1" style={{ marginTop: 2 }}>{b.name} · {app.distLabel(b)}</div>
       </div>
     </div>
@@ -303,5 +306,5 @@ export function MockCode({ seed, size }) {
 
 /* Enquiry status helpers shared by the consumer activity screens. */
 const notYet = (s) => /not yet/i.test(s)
-export const statusTone = (s) => !notYet(s) && /Visited|redeemed|Attended|Converted|confirmed/i.test(s) ? 'green' : /Expired|Cancelled|Invalid|Not interested|Unreachable|Disputed/i.test(s) ? 'grey' : 'blue'
-export const isPast = (s) => !notYet(s) && /Visited|redeemed|Attended|Converted|Expired|Cancelled|Invalid|Not interested/i.test(s)
+export const statusTone = (s) => !notYet(s) && /Visited|redeemed|Attended|Converted|confirmed|Returned/i.test(s) ? 'green' : /Expired|Cancelled|Invalid|Not interested|Unreachable|Disputed|Declined/i.test(s) ? 'grey' : 'blue'
+export const isPast = (s) => !notYet(s) && /Visited|redeemed|Attended|Converted|Expired|Cancelled|Invalid|Not interested|Returned|Declined/i.test(s)

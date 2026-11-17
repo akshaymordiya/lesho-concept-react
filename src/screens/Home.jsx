@@ -3,7 +3,7 @@ import { MapPin, ChevronDown, Search, Sparkles, ArrowUp, MessageSquareText, Imag
 import { useApp, Img, SectionHead, ProductCard, BizCard, EventCard, OfferCard, PostTile, ReviewCard, CatIcon, Verified, Empty, Note } from '../ui.jsx'
 import { CATS, USER } from '../data.js'
 
-export const PROMPTS = ['Wedding saree around ₹5,000', 'Good food near me', 'Compare phones under ₹25,000', 'Events this weekend', 'Find a salon', 'Explore local stores']
+export const PROMPTS = ['Wedding saree around ₹5,000', 'Good food near me', 'Rent a camera for the weekend', 'Compare phones under ₹25,000', 'Events this weekend', 'Find a salon', 'Explore local stores']
 
 export default function Home() {
   const app = useApp()
@@ -88,6 +88,11 @@ export default function Home() {
           <section className="section">
             <SectionHead title="Near you" sub={`Distances from ${area.name} centre`} action="Map" onAction={() => { app.setExploreSeed({ view: 'map', type: 'biz', t: Date.now() }); app.tab('explore') }} />
             <div className="hscroll">{near.slice(0, 6).map((b) => <BizCard key={b.id} b={b} />)}</div>
+          </section>
+
+          <section className="section">
+            <SectionHead title="Rent, don't buy" sub="By the day or month, from local shops" action="All rentals" onAction={() => { app.setExploreSeed({ rent: true, t: Date.now() }); app.tab('explore') }} />
+            <div className="hscroll">{app.products.filter((p) => p.rent).slice(0, 8).map((p) => <ProductCard key={p.id} p={p} />)}</div>
           </section>
 
           <section className="section">

@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { Check, Minus, Plus, Info, AlertCircle, Copy, MapPin, LocateFixed, Camera, Star, CalendarCheck, Ticket, Tag, Send, ShieldCheck, X, MessageSquareText } from 'lucide-react'
+import { Check, Minus, Plus, Info, AlertCircle, Copy, MapPin, LocateFixed, Camera, Star, CalendarCheck, Ticket, Tag, Send, ShieldCheck, X, MessageSquareText, KeyRound } from 'lucide-react'
 import { useApp, Sheet, Chip, Note, CheckRow, TopBar, MockCode, Img, Verified } from '../ui.jsx'
 import { cat as catOf, SAMPLE_MEDIA, USER } from '../data.js'
+import { RentalSummary, rentalStep } from './Rental.jsx'
 
 const Stepper = ({ value, set, min = 1, max = 20, label }) => (
   <div className="stepper" role="group" aria-label={label}>
@@ -145,6 +146,8 @@ export function VisitIntent({ param }) {
 }
 
 const REF_COPY = {
+  rental: { icon: KeyRound, title: 'Rental request sent', sub: (b) => `This is not a confirmed booking. ${b} will accept or suggest other dates, and collects rent and deposit directly.`,
+    steps: ['Rental request created', 'Sent to the shop', 'Shop accepts the dates', 'Handover — show this reference', 'Return and deposit settlement by the shop'] },
   visit: { icon: CalendarCheck, title: 'Visit request sent', sub: (b) => `This is not a confirmed reservation. ${b} manages seating and will confirm separately if they hold a table.`,
     steps: ['Visit intent created', 'Sent to the restaurant', 'Restaurant acknowledges', 'Show this reference on arrival to attribute your visit'] },
   event: { icon: Ticket, title: 'Request sent to organiser', sub: () => 'This is an enquiry, not a confirmed ticket. The organiser will reply with availability and payment steps.',
@@ -162,7 +165,8 @@ export function RefConfirm({ param }) {
   const b = app.biz(r.bizId), copy = REF_COPY[r.kind] || REF_COPY.enquiry
   const lead = app.leads.find((l) => l.id === r.id)
   const acked = (lead && lead.status !== 'New') || /Contacted|Visited|confirmed/i.test(r.status)
-  const doneN = /Visited|redeemed|Converted/i.test(lead?.status || r.status) ? 4 : acked ? 3 : 2
+  const status = lead && lead.status !== 'New' ? lead.status : r.status
+  const doneN = r.kind === 'rental' ? rentalStep(status) : /Visited|redeemed|Converted/i.test(lead?.status || r.status) ? 4 : acked ? 3 : 2
   const I = copy.icon
   return (
     <div className="screen dark">
@@ -182,6 +186,8 @@ export function RefConfirm({ param }) {
           <span className="badge blue" style={{ marginTop: 10 }}>{lead && lead.status !== 'New' ? lead.status : r.status}</span>
           {r.details?.length > 0 && <div className="wrap" style={{ marginTop: 12, gap: 6 }}>{r.details.map((d) => <span key={d} className="badge grey" style={{ fontSize: 12, padding: '5px 10px' }}>{d}</span>)}</div>}
           {r.note && <p className="small muted" style={{ marginTop: 10 }}>“{r.note}”</p>}
+          {r.rental && <div style={{ marginTop: 8 }}><RentalSummary rental={r.rental} deposit={lead?.deposit} /></div>}
+          {r.rental && /Declined/.test(status) && <div style={{ marginTop: 8 }}><Note tone="amber" icon={Info}>The shop isn't available on these dates. You can send a new request with other dates or message the shop.</Note></div>}
           <div className="tiny muted" style={{ marginTop: 10 }}>Created {r.created}</div>
           <div style={{ height: 0, position: 'absolute' }} />
           <div className="perf" />
@@ -221,7 +227,7 @@ export function ReviewComposer({ target }) {
   const app = useApp()
   const name = target.type === 'product' ? app.prod(target.id).name : target.type === 'event' ? app.event(target.id).name : app.biz(target.id).name
   const bizId = target.type === 'product' ? app.prod(target.id).bizId : target.type === 'event' ? app.event(target.id).bizId : target.id
-  const hasRef = app.refs.some((r) => r.bizId === bizId && /Visited|redeemed/i.test(r.status))
+  const hasRef = app.refs.some((r) => r.bizId === bizId && /Visited|redeemed|Returned/i.test(app.refStatus(r)))
   const [rating, setRating] = useState(0)
   const [text, setText] = useState('')
   const [photos, setPhotos] = useState([])

@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from 'react'
 import {
   Inbox, CheckCheck, Footprints, IndianRupee, ChevronRight, MousePointerClick, MessageSquareText, CalendarCheck, BadgeCheck, ArrowLeftRight, Search,
-  Film, Image as ImageIcon, Images, Tag, Megaphone, PartyPopper, Package, Plus, Pencil, Info, Check, Flag, AlertCircle, Eye, ArrowLeft, Link2, Play, Receipt, Timer,
+  Film, Image as ImageIcon, Images, Tag, Megaphone, PartyPopper, Package, Plus, Pencil, Info, Check, Flag, AlertCircle, Eye, ArrowLeft, Link2, Play, Receipt, Timer, KeyRound, Minus,
 } from 'lucide-react'
 import { useApp, Img, TopBar, Chip, Note, Sheet, Empty, Verified, inr, priceOf } from '../ui.jsx'
-import { ANALYTICS, PRICING, SAMPLE_MEDIA } from '../data.js'
+import { ANALYTICS, PRICING, SAMPLE_MEDIA, CATS } from '../data.js'
+import { RentalLeadActions, RentalsStrip, dayAt, dayLabel } from './Rental.jsx'
 import { ConversationList } from './Activity.jsx'
 
 const ME = 'b1'
 const KIND = {
   click: { label: 'Click', icon: MousePointerClick, hint: 'A tap on call, WhatsApp or directions. Not proof of contact.' },
   enquiry: { label: 'Enquiry', icon: MessageSquareText, hint: 'A deliberate request submitted through Lesho.' },
-  intent: { label: 'Intent', icon: CalendarCheck, hint: 'A planned visit or offer claim. Not yet evidenced.' },
+  intent: { label: 'Intent', icon: CalendarCheck, hint: 'A planned visit, rental request or offer claim. Not yet evidenced.' },
   verified: { label: 'Verified outcome', icon: BadgeCheck, hint: 'Evidence-backed: the reference was checked in person.' },
 }
-const statusTone = (s) => /New/.test(s) ? 'orange' : /redeemed|Visited|Converted/.test(s) ? 'green' : /Invalid|Disputed|Unreachable|Not interested/.test(s) ? 'red' : /Click/.test(s) ? 'grey' : 'blue'
+const statusTone = (s) => /New/.test(s) ? 'orange' : /redeemed|Visited|Converted|Returned/.test(s) ? 'green' : /Invalid|Disputed|Unreachable|Not interested|Declined/.test(s) ? 'red' : /Click/.test(s) ? 'grey' : 'blue'
 const billLabel = (l) => l.billable === 'yes' ? `Billable · ${inr(l.kind === 'verified' ? PRICING.verified : PRICING.enquiry)}` : l.billable === 'no' ? 'Not billed' : l.billable === 'review' ? 'Billing on hold' : 'Not billed yet'
 const Err = ({ children }) => <div className="errtxt" role="alert"><AlertCircle size={14} />{children}</div>
 
@@ -93,6 +94,8 @@ export function MDashboard() {
             <div className="num">{inr(spend)}</div><div className="tiny muted">Lead spend in this inbox</div>
           </button>
         </div>
+
+        <RentalsStrip />
 
         <form className="card padded" style={{ marginTop: 12 }} onSubmit={lookup}>
           <div className="b small">Customer at the counter?</div>
@@ -183,6 +186,8 @@ export function MLeadDetail({ param }) {
           </div>
         )}
 
+        {l.rental && <RentalLeadActions l={l} />}
+
         {!isClick && (
           <button className="btn dark block" style={{ marginTop: 12 }} onClick={() => app.go('chat', l.id)}>
             <MessageSquareText size={18} />{app.unreadFor('merchant', l.id) > 0 ? `Read ${app.unreadFor('merchant', l.id)} new message${app.unreadFor('merchant', l.id) > 1 ? 's' : ''}` : `Message ${l.consumer.split(' ')[0]}`}
@@ -191,7 +196,7 @@ export function MLeadDetail({ param }) {
 
         {isClick ? (
           <div style={{ marginTop: 12 }}><Note icon={Info}>Clicks are shown for context only. They are never billed and never counted as a contact, visit or sale.</Note></div>
-        ) : closed ? (
+        ) : l.rental ? null : closed ? (
           <div style={{ marginTop: 12 }}><Note icon={Info} tone={/Invalid|Disputed/.test(l.status) ? 'amber' : 'green'}>
             {/Invalid/.test(l.status) ? 'Flagged under the duplicate rule and excluded from billing.' : /Disputed/.test(l.status) ? 'Dispute raised. Billing for this lead is on hold while Lesho reviews it.' : 'This lead has reached an evidenced outcome.'}
           </Note></div>
@@ -218,32 +223,99 @@ export function MLeadDetail({ param }) {
 const STOCK = { ok: { label: 'In stock — merchant-reported today', tone: 'ok' }, low: { label: 'Limited pieces — merchant-reported today', tone: 'warn' }, none: { label: 'Availability not maintained by this store', tone: 'muted' } }
 const stockKey = (p) => p.avail.tone === 'ok' ? 'ok' : p.avail.tone === 'warn' ? 'low' : 'none'
 
-export function ProductEditor({ product, onClose, onSaved }) {
+const RENT_DAYS = Array.from({ length: 14 }, (_, i) => i)
+export function ProductEditor({ product, onClose, onSaved, rentDefault }) {
   const app = useApp()
-  const [d, setD] = useState(product ? { name: product.name, price: String(product.price), desc: product.desc, img: product.img, stock: stockKey(product) } : { name: '', price: '', desc: '', img: SAMPLE_MEDIA[0], stock: 'none' })
+  const pr = product?.rent
+  const [d, setD] = useState({
+    name: product?.name || '', price: product && product.sale !== false ? String(product.price) : '', desc: product?.desc || '', img: product?.img || SAMPLE_MEDIA[0], stock: product ? stockKey(product) : 'none',
+    cat: product?.cat || 'fashion', mode: pr ? (product.sale === false ? 'rent' : 'both') : rentDefault ? 'rent' : 'sale',
+    unit: pr?.unit || 'day', rate: pr ? String(pr.rate) : '', deposit: pr ? String(pr.deposit || '') : '', min: pr?.min || 1,
+    fulfil: pr?.fulfil || ['Pickup at store'], includes: pr ? pr.includes.join(', ') : '', blocked: pr?.blocked || [],
+  })
   const [tried, setTried] = useState(false)
-  const bad = { name: d.name.trim().length < 3, price: !(Number(d.price) > 0) }
+  const set = (patch) => setD((x) => ({ ...x, ...patch }))
+  const sells = d.mode !== 'rent', rents = d.mode !== 'sale'
+  const bad = { name: d.name.trim().length < 3, price: sells && !(Number(d.price) > 0), rate: rents && !(Number(d.rate) > 0), fulfil: rents && d.fulfil.length === 0 }
+  const toggle = (key, v) => set({ [key]: d[key].includes(v) ? d[key].filter((x) => x !== v) : [...d[key], v] })
   const save = () => {
     setTried(true)
-    if (bad.name || bad.price) return
-    const base = product || { id: `p-${Date.now()}`, bizId: ME, cat: 'fashion', kind: 'Product', rating: 0, reviews: 0, tags: ['new'], attrs: {}, variants: [] }
-    const p = { ...base, name: d.name.trim(), price: Number(d.price), desc: d.desc.trim() || 'No description added yet.', img: d.img, imgs: product && product.img === d.img ? product.imgs : [d.img], avail: STOCK[d.stock], fresh: 'Merchant-provided · updated just now' }
-    app.saveProduct(p); app.toast(product ? 'Catalogue item updated' : 'Added to catalogue'); onSaved?.(p); onClose()
+    if (Object.values(bad).some(Boolean)) return
+    const base = product || { id: `p-${Date.now()}`, bizId: ME, rating: 0, reviews: 0, tags: ['new'], attrs: {}, variants: [] }
+    const rent = rents ? {
+      unit: d.unit, rate: Number(d.rate), min: d.min, deposit: Number(d.deposit) || 0, fulfil: d.fulfil, deliveryFee: pr?.deliveryFee ?? null, blocked: d.blocked,
+      ...(pr?.week ? { week: pr.week } : {}), ...(pr?.ask ? { ask: pr.ask } : {}), ...(pr?.requires ? { requires: pr.requires } : {}),
+      includes: d.includes.split(',').map((x) => x.trim()).filter(Boolean).length ? d.includes.split(',').map((x) => x.trim()).filter(Boolean) : ['As described by the shop'],
+      terms: pr?.terms || [`Minimum ${d.min} ${d.unit}${d.min > 1 ? 's' : ''}`, 'Carry a government ID at handover'],
+      record: pr?.record || { rentals: 0, lastCheck: 'today', checks: ['Details provided by the shop'] },
+    } : undefined
+    const p = {
+      ...base, cat: d.cat, kind: sells ? 'Product' : 'Rental', sale: sells ? undefined : false, name: d.name.trim(), price: sells ? Number(d.price) : Number(d.rate), desc: d.desc.trim() || 'No description added yet.',
+      img: d.img, imgs: product && product.img === d.img ? product.imgs : [d.img], avail: sells ? STOCK[d.stock] : { label: 'Rental dates are confirmed by the shop', tone: 'muted' }, fresh: 'Merchant-provided · updated just now', rent,
+    }
+    app.saveProduct(p); app.toast(product ? 'Catalogue item updated' : rents ? 'Rental listing added' : 'Added to catalogue'); onSaved?.(p); onClose()
   }
   return (
-    <Sheet title={product ? 'Edit item' : 'Add catalogue item'} onClose={onClose} footer={<button className="btn primary block" onClick={save}>{product ? 'Save changes' : 'Add to catalogue'}</button>}>
+    <Sheet title={product ? 'Edit item' : rentDefault ? 'New rental listing' : 'Add catalogue item'} onClose={onClose} footer={<button className="btn primary block" onClick={save}>{product ? 'Save changes' : rents ? 'Publish rental listing' : 'Add to catalogue'}</button>}>
       <div className="b small" style={{ marginBottom: 8 }}>Photo (sample images)</div>
-      <div className="mediapick">{SAMPLE_MEDIA.slice(0, 4).map((m) => <button key={m} aria-label="Sample photo" aria-pressed={d.img === m} className={d.img === m ? 'on' : ''} onClick={() => setD({ ...d, img: m })}><Img id={m} w={160} alt="" /></button>)}</div>
+      <div className="mediapick">{SAMPLE_MEDIA.slice(0, 4).map((m) => <button key={m} aria-label="Sample photo" aria-pressed={d.img === m} className={d.img === m ? 'on' : ''} onClick={() => set({ img: m })}><Img id={m} w={160} alt="" /></button>)}</div>
       <label className="field" style={{ marginTop: 14 }}><span className="lbl">Name</span>
-        <input className={`input ${tried && bad.name ? 'err' : ''}`} value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} placeholder="e.g. Chanderi silk saree, teal" />
+        <input className={`input ${tried && bad.name ? 'err' : ''}`} value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Chanderi silk saree, teal" />
         {tried && bad.name && <Err>Add a product name.</Err>}</label>
-      <label className="field" style={{ marginTop: 12 }}><span className="lbl">Price (₹)</span>
-        <input className={`input ${tried && bad.price ? 'err' : ''}`} inputMode="numeric" value={d.price} onChange={(e) => setD({ ...d, price: e.target.value.replace(/[^\d]/g, '') })} placeholder="4500" />
-        {tried && bad.price && <Err>Enter a price above zero.</Err>}</label>
-      <div className="b small" style={{ margin: '14px 0 8px' }}>Availability shown to customers</div>
-      <div className="wrap">{[['ok', 'In stock'], ['low', 'Limited'], ['none', "I don't maintain stock"]].map(([k, l]) => <Chip key={k} on={d.stock === k} onClick={() => setD({ ...d, stock: k })}>{l}</Chip>)}</div>
+
+      <div className="b small" style={{ margin: '14px 0 8px' }}>Category</div>
+      <div className="hscroll tight" style={{ margin: '0 -20px' }}>{CATS.map((c) => <Chip key={c.id} on={d.cat === c.id} onClick={() => set({ cat: c.id })}>{c.label}</Chip>)}</div>
+
+      <div className="b small" style={{ margin: '14px 0 8px' }}>How customers can get it</div>
+      <div className="seg" role="radiogroup" aria-label="Listing type">
+        {[['sale', 'Sell'], ['rent', 'Rent out'], ['both', 'Sell and rent']].map(([k, l]) => <button key={k} role="radio" aria-checked={d.mode === k} className={d.mode === k ? 'on' : ''} onClick={() => set({ mode: k })}>{l}</button>)}
+      </div>
+
+      {sells && (
+        <>
+          <label className="field" style={{ marginTop: 12 }}><span className="lbl">Selling price (₹)</span>
+            <input className={`input ${tried && bad.price ? 'err' : ''}`} inputMode="numeric" value={d.price} onChange={(e) => set({ price: e.target.value.replace(/[^\d]/g, '') })} placeholder="4500" />
+            {tried && bad.price && <Err>Enter a price above zero.</Err>}</label>
+          <div className="b small" style={{ margin: '14px 0 8px' }}>Availability shown to customers</div>
+          <div className="wrap">{[['ok', 'In stock'], ['low', 'Limited'], ['none', "I don't maintain stock"]].map(([k, l]) => <Chip key={k} on={d.stock === k} onClick={() => set({ stock: k })}>{l}</Chip>)}</div>
+        </>
+      )}
+
+      {rents && (
+        <div className="card flat padded" style={{ marginTop: 14 }}>
+          <div className="row" style={{ gap: 8 }}><KeyRound size={16} /><span className="b small">Rental details</span></div>
+          <div className="grid2" style={{ marginTop: 10, gap: 10 }}>
+            <label className="field"><span className="lbl">Rent (₹)</span>
+              <input className={`input ${tried && bad.rate ? 'err' : ''}`} inputMode="numeric" value={d.rate} onChange={(e) => set({ rate: e.target.value.replace(/[^\d]/g, '') })} placeholder="750" aria-label="Rental rate" /></label>
+            <div className="field"><span className="lbl">Charged per</span>
+              <div className="seg" style={{ background: '#fff' }}>{['day', 'month'].map((u) => <button key={u} className={d.unit === u ? 'on' : ''} aria-pressed={d.unit === u} onClick={() => set({ unit: u })} style={d.unit === u ? { background: 'var(--ink)', color: '#fff' } : null}>{u[0].toUpperCase() + u.slice(1)}</button>)}</div></div>
+          </div>
+          {tried && bad.rate && <Err>Enter a rental rate above zero.</Err>}
+          <div className="grid2" style={{ marginTop: 10, gap: 10 }}>
+            <label className="field"><span className="lbl">Refundable deposit (₹)</span>
+              <input className="input" inputMode="numeric" value={d.deposit} onChange={(e) => set({ deposit: e.target.value.replace(/[^\d]/g, '') })} placeholder="0 for none" aria-label="Refundable deposit" /></label>
+            <div className="field"><span className="lbl">Minimum {d.unit}s</span>
+              <div className="stepper" style={{ gap: 10, height: 48 }}>
+                <button type="button" className="icon-btn" aria-label="Decrease minimum" disabled={d.min <= 1} onClick={() => set({ min: d.min - 1 })}><Minus size={16} /></button><b>{d.min}</b>
+                <button type="button" className="icon-btn" aria-label="Increase minimum" onClick={() => set({ min: Math.min(12, d.min + 1) })}><Plus size={16} /></button>
+              </div></div>
+          </div>
+          <div className="b small" style={{ margin: '12px 0 8px' }}>Handover</div>
+          <div className="wrap">{['Pickup at store', 'Home delivery'].map((f) => <Chip key={f} on={d.fulfil.includes(f)} onClick={() => toggle('fulfil', f)}>{f}</Chip>)}</div>
+          {tried && bad.fulfil && <Err>Choose at least one handover option.</Err>}
+          <label className="field" style={{ marginTop: 12 }}><span className="lbl">What's included (comma separated)</span>
+            <input className="input" value={d.includes} onChange={(e) => set({ includes: e.target.value })} placeholder="Dry-cleaning, garment bag" /></label>
+          <div className="b small" style={{ margin: '12px 0 2px' }}>Days already booked</div>
+          <div className="tiny muted" style={{ marginBottom: 8 }}>Tap to block. Customers can't start a rental on these days.</div>
+          <div className="avail pick">
+            {RENT_DAYS.map((i) => { const dt = dayAt(i); return <button key={i} className={d.blocked.includes(i) ? 'off' : ''} aria-pressed={d.blocked.includes(i)} aria-label={`${dayLabel(i)}${d.blocked.includes(i) ? ', booked' : ''}`} onClick={() => toggle('blocked', i)}><i>{'SMTWTFS'[dt.getDay()]}</i>{dt.getDate()}</button> })}
+          </div>
+          <div style={{ marginTop: 10 }}><Note icon={Info}>Customers send a rental request with dates. You accept it, then collect rent and deposit yourself — Lesho doesn't take payment.</Note></div>
+        </div>
+      )}
+
       <label className="field" style={{ marginTop: 14 }}><span className="lbl">Description</span>
-        <textarea className="textarea" value={d.desc} onChange={(e) => setD({ ...d, desc: e.target.value })} placeholder="Fabric, work, what's included" /></label>
+        <textarea className="textarea" value={d.desc} onChange={(e) => set({ desc: e.target.value })} placeholder="Fabric, work, what's included" /></label>
       <div style={{ marginTop: 10 }}><Note icon={Info}>Customers always see when this was last updated and that it is merchant-provided.</Note></div>
     </Sheet>
   )
@@ -267,7 +339,7 @@ export function MCatalogue() {
                 <Img id={p.img} w={200} alt={p.name} />
                 <div className="grow">
                   <div className="b clamp1" style={{ fontSize: 14 }}>{p.name}</div>
-                  <div className="row" style={{ gap: 8, marginTop: 2 }}><span className="price">{priceOf(p)}</span><span className={`badge ${p.avail.tone === 'ok' ? 'green' : p.avail.tone === 'warn' ? 'amber' : 'grey'}`}>{p.avail.tone === 'ok' ? 'In stock' : p.avail.tone === 'warn' ? 'Limited' : 'Stock not maintained'}</span></div>
+                  <div className="wrap" style={{ gap: 6, marginTop: 2, alignItems: 'center' }}><span className="price">{priceOf(p)}</span>{p.sale !== false && <span className={`badge ${p.avail.tone === 'ok' ? 'green' : p.avail.tone === 'warn' ? 'amber' : 'grey'}`}>{p.avail.tone === 'ok' ? 'In stock' : p.avail.tone === 'warn' ? 'Limited' : 'Stock not maintained'}</span>}{p.rent && <span className="badge dark"><KeyRound size={11} />{p.sale === false ? 'For rent' : `Rent ${inr(p.rent.rate)}/${p.rent.unit}`}</span>}</div>
                   <div className="tiny muted clamp1" style={{ marginTop: 3 }}>{app.posts.filter((x) => x.tags?.includes(p.id) || x.imgs?.some((i) => i.tag === p.id)).length} linked posts · {p.fresh.split(' · ')[1]}</div>
                 </div>
                 <button className="icon-btn" aria-label={`Edit ${p.name}`} onClick={() => setEdit(p)}><Pencil size={17} /></button>
@@ -284,6 +356,7 @@ export function MCatalogue() {
 /* ---------- Content composer ---------- */
 const TYPES = [
   { id: 'product', label: 'Product', hint: 'Add a catalogue item', icon: Package },
+  { id: 'rental', label: 'Rental listing', hint: 'Rent out by day or month', icon: KeyRound },
   { id: 'reel', label: 'Reel', hint: 'Short vertical video', icon: Film },
   { id: 'story', label: 'Story', hint: 'Visible for 24 hours', icon: Timer },
   { id: 'image', label: 'Image', hint: 'One photo, one moment', icon: ImageIcon },
@@ -299,7 +372,7 @@ export function MCreate() {
   const [d, setD] = useState({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '' })
   const [tried, setTried] = useState(false)
   const [done, setDone] = useState(null)
-  const composing = !!type && type !== 'product' && !done
+  const composing = !!type && type !== 'product' && type !== 'rental' && !done
   useEffect(() => { app.setNavHidden(composing); return () => app.setNavHidden(false) }, [composing])
   const items = app.products.filter((p) => p.bizId === ME)
   const T = TYPES.find((t) => t.id === type)
@@ -353,10 +426,10 @@ export function MCreate() {
     </div>
   )
 
-  if (type === 'product') return (
+  if (type === 'product' || type === 'rental') return (
     <>
       <div className="screen tabbed" />
-      <ProductEditor onClose={() => setType(null)} onSaved={() => app.tab('mcat')} />
+      <ProductEditor rentDefault={type === 'rental'} onClose={() => setType(null)} onSaved={() => app.tab('mcat')} />
     </>
   )
 

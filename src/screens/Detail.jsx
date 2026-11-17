@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import {
   Share2, Phone, Navigation, MessageCircle, MapPin, Clock, ChevronRight, Info, Tag, ShieldCheck, ShieldQuestion, CalendarDays, Ticket, Play,
-  ExternalLink, PenLine, UserPlus, UserCheck, CalendarCheck, Check, Store, Users, MessageSquareText,
+  ExternalLink, PenLine, KeyRound, UserPlus, UserCheck, CalendarCheck, Check, Store, Users, MessageSquareText,
 } from 'lucide-react'
 import { useApp, Img, TopBar, SaveBtn, Verified, Rating, Stars, Note, Chip, ProductCard, ProductRow, ReviewCard, OfferCard, EventCard, PostTile, Empty, priceOf, CatIcon } from '../ui.jsx'
 import { cat as catOf } from '../data.js'
+import { RentalBlock, rentLabel } from './Rental.jsx'
 
 function Gallery({ imgs, alt, height = 400, children }) {
   const [i, setI] = useState(0)
@@ -42,7 +43,7 @@ export function ProductDetail({ param }) {
   const revs = app.reviews.filter((r) => r.target.type === 'product' && r.target.id === p.id)
   const similar = app.products.filter((x) => x.id !== p.id && x.cat === p.cat && x.bizId !== p.bizId && x.tags.some((t) => p.tags.includes(t))).slice(0, 6)
   const more = app.products.filter((x) => x.id !== p.id && x.bizId === p.bizId).slice(0, 6)
-  const isFood = p.cat === 'food'
+  const isFood = p.cat === 'food' && !p.rent, canBuy = p.sale !== false
   const lead = () => app.openLead({ catId: p.cat, bizId: b.id, subject: p.name, source: 'Product page', variant })
 
   return (
@@ -59,8 +60,10 @@ export function ProductDetail({ param }) {
           <h1 className="h2" style={{ marginTop: 10, fontSize: 20 }}>{p.name}</h1>
           <div className="row" style={{ marginTop: 8, alignItems: 'baseline', gap: 10 }}>
             <span className="price" style={{ fontSize: 23 }}>{priceOf(p)}</span>
+            {p.rent && canBuy && <span className="small muted">to buy</span>}
             <Rating value={p.rating} count={p.reviews} />
           </div>
+          {p.rent && canBuy && <div className="small b" style={{ marginTop: 2, color: 'var(--blue-deep)' }}>or rent from {rentLabel(p)}</div>}
           <div className="tiny muted" style={{ marginTop: 2 }}>{p.fresh}</div>
 
           {p.variants?.length > 0 && (
@@ -75,6 +78,7 @@ export function ProductDetail({ param }) {
               <b>{p.avail.label}.</b> Lesho has not verified this — confirm with the {isFood ? 'restaurant' : 'business'} before you go.
             </Note>
           </div>
+          {p.rent && <RentalBlock p={p} />}
 
           {offer && (
             <button className="card orange padded tap row" style={{ marginTop: 12 }} onClick={() => app.go('offer', offer.id)}>
@@ -87,7 +91,7 @@ export function ProductDetail({ param }) {
           <p style={{ marginTop: 18 }}>{p.desc}</p>
           <div style={{ marginTop: 12 }}>{Object.entries(p.attrs).map(([k, v]) => <div key={k} className="kv"><span>{k}</span><span>{v}</span></div>)}</div>
 
-          <div className="eyebrow" style={{ margin: '22px 0 8px' }}>{isFood ? 'Served at' : p.kind === 'Service' ? 'Offered by' : 'Sold by'}</div>
+          <div className="eyebrow" style={{ margin: '22px 0 8px' }}>{isFood ? 'Served at' : p.kind === 'Service' ? 'Offered by' : p.kind === 'Rental' ? 'Rented out by' : 'Sold by'}</div>
           <BizRow b={b} />
 
           <div className="between" style={{ marginTop: 26 }}>
@@ -110,8 +114,10 @@ export function ProductDetail({ param }) {
       </div>
       <div className="actionbar">
         <button className="icon-btn" aria-label={`Call ${b.name}`} onClick={() => app.contact('call', b, p.name)}><Phone size={19} /></button>
-        <button className="icon-btn" aria-label="Get directions" onClick={() => app.contact('directions', b, p.name)}><Navigation size={19} /></button>
-        {isFood
+        {!(p.rent && canBuy) && <button className="icon-btn" aria-label="Get directions" onClick={() => app.contact('directions', b, p.name)}><Navigation size={19} /></button>}
+        {p.rent
+          ? <>{canBuy && <button className="btn ghost" style={{ flex: '0 1 auto' }} onClick={lead}>Ask to buy</button>}<button className="btn primary" onClick={() => app.go('rent', p.id)}><KeyRound size={18} />Request to rent</button></>
+          : isFood
           ? <><button className="icon-btn" aria-label="Ask a question" onClick={lead}><MessageSquareText size={19} /></button><button className="btn primary" onClick={() => app.go('visit', b.id)}><CalendarCheck size={18} />Plan a visit</button></>
           : <button className="btn primary" onClick={lead}>{c.lead.cta}</button>}
       </div>
@@ -122,7 +128,8 @@ export function ProductDetail({ param }) {
 export function BusinessProfile({ param }) {
   const app = useApp()
   const b = app.biz(param), c = catOf(b.cat)
-  const items = app.products.filter((p) => p.bizId === b.id)
+  const items = app.products.filter((p) => p.bizId === b.id && p.sale !== false)
+  const rentals = app.products.filter((p) => p.bizId === b.id && p.rent)
   const posts = app.posts.filter((p) => p.bizId === b.id)
   const offers = app.offers.filter((o) => o.bizId === b.id)
   const events = app.events.filter((e) => e.bizId === b.id)
@@ -130,6 +137,7 @@ export function BusinessProfile({ param }) {
   const isFood = b.cat === 'food', isOrg = b.cat === 'events'
   const tabs = [
     ...(items.length ? [['cat', isFood ? 'Menu' : b.cat === 'fashion' || b.cat === 'electronics' || b.cat === 'home' ? 'Catalogue' : 'Services']] : []),
+    ...(rentals.length ? [['rent', `Rentals ${rentals.length}`]] : []),
     ...(events.length ? [['events', 'Events']] : []),
     ['posts', `Posts${posts.length ? ` ${posts.length}` : ''}`], ['offers', 'Offers'], ['reviews', 'Reviews'], ['about', 'About'],
   ]
@@ -180,6 +188,7 @@ export function BusinessProfile({ param }) {
           {tab === 'cat' && (isFood || b.cat !== 'fashion' && b.cat !== 'home' && b.cat !== 'electronics'
             ? <>{isFood && <Note icon={Info}>Menu prices are merchant-provided and may differ at the table.</Note>}{items.map((p) => <ProductRow key={p.id} p={p} />)}</>
             : <div className="grid2">{items.map((p) => <ProductCard key={p.id} p={p} grid />)}</div>)}
+          {tab === 'rent' && <><Note icon={KeyRound}>Rent by the day or month. {b.name} confirms dates and collects rent and deposit directly.</Note>{rentals.map((p) => <ProductRow key={p.id} p={p} right={<span className="badge blue" style={{ flex: 'none' }}>{rentLabel(p)}</span>} />)}</>}
           {tab === 'events' && events.map((e) => <EventCard key={e.id} e={e} row />)}
           {tab === 'posts' && (posts.length
             ? <div className="grid2">{posts.map((p) => <PostTile key={p.id} post={p} style={{ width: '100%' }} />)}</div>

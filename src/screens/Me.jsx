@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Bookmark, ChevronRight, Compass, LocateFixed, MapPin, Store, ArrowRight, Sparkles, Tag, Check, Settings, ShieldCheck, RotateCcw, Send, CalendarCheck, Ticket, ArrowLeft, Play, Images, MessageSquareText } from 'lucide-react'
+import { Bookmark, ChevronRight, Compass, LocateFixed, MapPin, Store, ArrowRight, Sparkles, Tag, Check, Settings, ShieldCheck, RotateCcw, Send, CalendarCheck, Ticket, ArrowLeft, Play, Images, MessageSquareText, KeyRound } from 'lucide-react'
 import { useApp, SaveBtn, statusTone, isPast, Img, Empty, ProductRow, BizCard, EventCard, Chip, CatIcon, Note, Verified } from '../ui.jsx'
 import { CATS, USER, cat as catOf } from '../data.js'
 
@@ -56,7 +56,7 @@ export function Saved() {
   )
 }
 
-const REF_ICON = { visit: CalendarCheck, event: Ticket, offer: Tag, enquiry: Send }
+const REF_ICON = { visit: CalendarCheck, event: Ticket, offer: Tag, enquiry: Send, rental: KeyRound }
 export function Profile() {
   const app = useApp()
   const { prefs } = app

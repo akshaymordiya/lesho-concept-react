@@ -1,23 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Sparkles, ArrowUp, RotateCcw, Scale, Check, Info, Compass, Eye, X } from 'lucide-react'
-import { useApp, Img, Chip, Note, Rating, SaveBtn, Sheet, EventCard, BizCard, inr, priceOf, Verified } from '../ui.jsx'
+import { useApp, Img, Chip, Note, Rating, SaveBtn, Sheet, EventCard, BizCard, inr, priceOf, rentRate, Verified } from '../ui.jsx'
 import { cat as catOf } from '../data.js'
 import { PROMPTS } from './Home.jsx'
 
 // Deterministic mock "AI": keyword intent parsing over local mock data. No model is called.
 const INTENTS = [
-  { cat: 'services', type: 'product', kw: ['ac', 'repair', 'cleaning', 'cleaner', 'tutor', 'electrician', 'plumber'], noun: 'a home service' },
-  { cat: 'fashion', type: 'product', kw: ['saree', 'sari', 'lehenga', 'kurta', 'wedding', 'dress', 'suit', 'outfit'], noun: 'occasion wear' },
-  { cat: 'electronics', type: 'product', kw: ['phone', 'mobile', 'headphone', 'earbuds'], noun: 'a phone' },
-  { cat: 'events', type: 'event', kw: ['event', 'weekend', 'concert', 'workshop', 'music', 'festival'], noun: 'events' },
+  { cat: 'services', type: 'product', kw: ['ac', 'repair', 'cleaning', 'cleaner', 'drill', 'tool', 'tutor', 'electrician', 'plumber'], noun: 'a home service' },
+  { cat: 'fashion', type: 'product', kw: ['saree', 'sari', 'lehenga', 'kurta', 'wedding', 'dress', 'suit', 'tuxedo', 'outfit'], noun: 'occasion wear' },
+  { cat: 'electronics', type: 'product', kw: ['phone', 'mobile', 'headphone', 'earbuds', 'camera', 'lens'], noun: 'a phone' },
+  { cat: 'events', type: 'event', kw: ['event', 'concert', 'workshop', 'music', 'festival', 'sound system', 'speaker', 'weekend'], noun: 'events' },
   { cat: 'beauty', type: 'product', kw: ['salon', 'hair', 'facial', 'spa', 'makeup'], noun: 'a salon service' },
-  { cat: 'home', type: 'product', kw: ['sofa', 'furniture', 'chair', 'interior'], noun: 'furniture' },
-  { cat: 'fitness', type: 'product', kw: ['gym', 'yoga', 'fitness', 'workout'], noun: 'a gym or class' },
-  { cat: 'auto', type: 'product', kw: ['car', 'bike', 'test drive', 'servicing'], noun: 'car care' },
-  { cat: 'food', type: 'product', kw: ['food', 'dosa', 'thali', 'dinner', 'lunch', 'breakfast', 'restaurant', 'cafe', 'café', 'coffee', 'eat', 'hungry'], noun: 'food' },
+  { cat: 'home', type: 'product', kw: ['sofa', 'furniture', 'chair', 'bed', 'interior'], noun: 'furniture' },
+  { cat: 'fitness', type: 'product', kw: ['gym', 'yoga', 'fitness', 'workout', 'bicycle', 'cycle', 'treadmill'], noun: 'a gym or class' },
+  { cat: 'auto', type: 'product', kw: ['car', 'bike', 'motorcycle', 'test drive', 'servicing'], noun: 'car care' },
+  { cat: 'food', type: 'product', kw: ['food', 'dosa', 'thali', 'dinner', 'lunch', 'breakfast', 'restaurant', 'cafe', 'café', 'coffee', 'eat', 'hungry', 'buffet', 'catering'], noun: 'food' },
   { cat: null, type: 'biz', kw: ['store', 'shop', 'local'], noun: 'local stores' },
 ]
-const SUBS = ['saree', 'lehenga', 'suit', 'phone', 'headphones', 'dosa', 'thali', 'coffee', 'sofa', 'chair', 'hair', 'facial', 'gym', 'cleaning', 'ac']
+const SUBS = ['camera', 'drill', 'bicycle', 'treadmill', 'tuxedo', 'speaker', 'buffet', 'motorcycle', 'bed', 'saree', 'lehenga', 'suit', 'phone', 'headphones', 'dosa', 'thali', 'coffee', 'sofa', 'chair', 'hair', 'facial', 'gym', 'cleaning', 'ac']
 const STYLES = { fashion: ['silk', 'georgette'], electronics: ['5g'], food: ['south indian', 'gujarati'] }
 
 function parseBudget(t) {
@@ -32,7 +32,10 @@ function interpret(text) {
   const budget = parseBudget(t)
   const sub = SUBS.find((s) => t.includes(s === 'ac' ? ' ac ' : s)) || (t.includes('sari') ? 'saree' : t.includes('mobile') ? 'phone' : null)
   const style = hit && (STYLES[hit.cat] || []).find((s) => t.includes(s))
-  return { ...(hit || { cat: null, type: 'unknown' }), budget, sub, style: style || null, occasion: /wedding|shaadi|sangeet|reception/.test(t) ? 'wedding' : null, text }
+  const rent = /\b(rent|rental|rentals|renting|hire|hiring)\b/.test(t)
+  // "Weekend" alone is a time, not a request for events, when the person wants to rent something.
+  const base = rent ? { ...(hit && hit.type === 'product' ? hit : { cat: hit && hit.cat !== 'events' ? hit.cat : sub === 'speaker' ? 'events' : null, noun: 'something' }), type: 'product' } : hit || { cat: null, type: 'unknown' }
+  return { ...base, rent, budget, sub, style: style || null, occasion: /wedding|shaadi|sangeet|reception/.test(t) ? 'wedding' : null, text }
 }
 
 function resultsFor(intent, f, app) {
@@ -40,20 +43,22 @@ function resultsFor(intent, f, app) {
   if (intent.type === 'biz') return [...app.businesses].sort((a, b) => (app.distOf(a) ?? 0) - (app.distOf(b) ?? 0)).slice(0, 5).map((b) => ({ type: 'biz', item: b }))
   if (intent.type !== 'product') return []
   const cap = f.budget ? f.budget * (f.stretch ? 1.15 : 1) : Infinity
+  const eff = (p) => (intent.rent ? p.rent.rate : p.price)
   return app.products
-    .filter((p) => p.cat === intent.cat)
+    .filter((p) => (intent.rent ? p.rent && (!intent.cat || p.cat === intent.cat) : p.cat === intent.cat && (intent.sub || p.sale !== false)))
     .filter((p) => !intent.sub || p.tags.includes(intent.sub) || new RegExp(`\\b${intent.sub}`, 'i').test(p.name))
     .filter((p) => !f.occasion || p.tags.includes(f.occasion))
     .filter((p) => !f.style || p.tags.includes(f.style))
-    .filter((p) => p.price <= cap)
+    .filter((p) => eff(p) <= cap)
     .filter((p) => !f.near || (app.distOf(app.biz(p.bizId)) ?? 0) <= 5)
-    .sort((a, b) => (f.budget ? (a.price > f.budget) - (b.price > f.budget) : 0) || b.rating - a.rating)
+    .sort((a, b) => (f.budget ? (eff(a) > f.budget) - (eff(b) > f.budget) : 0) || b.rating - a.rating)
     .slice(0, 6)
-    .map((p) => ({ type: 'product', item: p, over: f.budget && p.price > f.budget ? p.price - f.budget : 0 }))
+    .map((p) => ({ type: 'product', item: p, rent: !!intent.rent, over: f.budget && eff(p) > f.budget ? eff(p) - f.budget : 0 }))
 }
 
-function whyFor(p, over, f, app) {
+function whyFor(p, over, f, app, rent) {
   const b = app.biz(p.bizId), out = []
+  if (rent) out.push(`${rentRate(p)}, minimum ${p.rent.min} ${p.rent.unit}${p.rent.min > 1 ? 's' : ''} · ${p.rent.deposit ? `${inr(p.rent.deposit)} refundable deposit` : 'no deposit'}`)
   if (f.budget) out.push(over ? `${inr(over)} over your budget — shown as a close alternative` : `Within your ${inr(f.budget)} budget`)
   if (f.occasion && p.tags.includes(f.occasion)) out.push(`Tagged for ${f.occasion}s by the store`)
   if (f.style && p.tags.includes(f.style)) out.push(`Matches “${f.style}”`)
@@ -86,7 +91,7 @@ export default function Guide() {
     if (next.type === 'unknown' && intent && intent.type === 'product' && (next.budget || style || next.occasion || /near|close|cheaper|less/.test(low))) {
       nf = { ...f, ...(next.budget ? { budget: next.budget, stretch: false } : {}), ...(style ? { style } : {}), ...(next.occasion ? { occasion: next.occasion } : {}), ...(/near|close/.test(low) ? { near: true } : {}) }
       if (/cheaper|less/.test(low) && !next.budget) {
-        const base = f.budget || Math.max(...resultsFor(intent, f, app).map((r) => r.item.price), 0)
+        const base = f.budget || Math.max(...resultsFor(intent, f, app).map((r) => (r.rent ? r.item.rent.rate : r.item.price)), 0)
         if (base) nf = { ...nf, budget: Math.max(50, Math.round((base * 0.85) / 50) * 50), stretch: false }
       }
       next = { ...intent, refined: true }
@@ -112,7 +117,7 @@ export default function Guide() {
     if (intent.type === 'unknown') return <>I couldn't match that to a category in this preview. Pick one below, or tell me a product, a place or an occasion.</>
     if (intent.type === 'event') return <>Here are <b>events coming up</b> around {app.area.city}. Tickets are handled by each organiser — I can only help you send a request.</>
     if (intent.type === 'biz') return <>Here are <b>local stores</b> closest to {app.area.name}. Open any profile to see its catalogue, posts and reviews.</>
-    const bits = [<b key="a">{intent.sub || intent.noun}</b>]
+    const bits = [<b key="a">{intent.sub || intent.noun}{intent.rent ? ' to rent' : ''}</b>]
     if (f.occasion) bits.push(<> for a <b>{f.occasion}</b></>)
     if (f.budget) bits.push(<> around <b>{inr(f.budget)}</b></>)
     bits.push(<> near <b>{app.area.name}</b></>)
@@ -121,7 +126,7 @@ export default function Guide() {
       <>
         {intent.refined ? 'Updated. ' : ''}Here's what I understood: {bits.map((b, i) => <React.Fragment key={i}>{b}</React.Fragment>)}.{' '}
         {results.length
-          ? <>I found <b>{results.length} option{results.length > 1 ? 's' : ''}</b> across {stores} store{stores > 1 ? 's' : ''}.{over ? ` ${over} ${over > 1 ? 'are' : 'is'} slightly over budget and marked.` : ''} I haven't confirmed stock with any store.</>
+          ? <>I found <b>{results.length} option{results.length > 1 ? 's' : ''}</b> across {stores} store{stores > 1 ? 's' : ''}.{over ? ` ${over} ${over > 1 ? 'are' : 'is'} slightly over budget and marked.` : ''} {intent.rent ? 'Dates are confirmed by each shop when you send a rental request.' : "I haven't confirmed stock with any store."}</>
           : <>Nothing in the mock catalogue matches all of that. Try loosening a filter below.</>}
       </>
     )
@@ -168,7 +173,7 @@ export default function Guide() {
                         {f.budget && <Chip className="blue" on={f.stretch} onClick={() => setF({ ...f, stretch: !f.stretch })}>Allow +15%</Chip>}
                         {intent.occasion && <Chip className="blue" on={!!f.occasion} onClick={() => setF({ ...f, occasion: f.occasion ? null : intent.occasion })}>Wedding</Chip>}
                         <Chip className="blue" on={f.near} onClick={() => setF({ ...f, near: !f.near })}>Within 5 km of {app.area.name}</Chip>
-                        {(STYLES[intent.cat] || []).map((s) => <Chip key={s} className="blue" on={f.style === s} onClick={() => setF({ ...f, style: f.style === s ? null : s })}>{s[0].toUpperCase() + s.slice(1)}</Chip>)}
+                        {(intent.rent ? [] : STYLES[intent.cat] || []).map((s) => <Chip key={s} className="blue" on={f.style === s} onClick={() => setF({ ...f, style: f.style === s ? null : s })}>{s[0].toUpperCase() + s.slice(1)}</Chip>)}
                       </div>
                     )}
                     {results.length > 0 && <Note icon={Info} tone="amber">Recommendations use mock merchant data, not live inventory. Prices are merchant-provided; confirm with the store.</Note>}
@@ -180,8 +185,8 @@ export default function Guide() {
                     {intent.type === 'product' && results.length > 0 && (
                       <div className="wrap" style={{ marginTop: 2 }}>
                         <span className="tiny muted" style={{ width: '100%' }}>Refine</span>
-                        {['Show cheaper options', 'Only near me', ...(intent.cat === 'fashion' ? ['Only silk'] : [])].map((p) => <Chip key={p} onClick={() => send(p)}>{p}</Chip>)}
-                        <Chip onClick={() => { app.setExploreSeed({ cat: intent.cat, q: intent.sub || '', t: Date.now() }); app.tab('explore') }}><Compass size={14} />Browse all {catOf(intent.cat).label.toLowerCase()}</Chip>
+                        {['Show cheaper options', 'Only near me', ...(intent.cat === 'fashion' && !intent.rent ? ['Only silk'] : [])].map((p) => <Chip key={p} onClick={() => send(p)}>{p}</Chip>)}
+                        <Chip onClick={() => { app.setExploreSeed({ ...(intent.cat ? { cat: intent.cat } : {}), ...(intent.rent ? { rent: true } : { q: intent.sub || '' }), t: Date.now() }); app.tab('explore') }}><Compass size={14} />Browse all {intent.rent ? 'rentals' : catOf(intent.cat).label.toLowerCase()}</Chip>
                       </div>
                     )}
                   </React.Fragment>
@@ -219,14 +224,14 @@ function ResultCard({ r, f, i, picked, onCmp }) {
         <div className="grow">
           {r.over > 0 && <span className="badge amber" style={{ marginBottom: 5 }}>Over budget by {inr(r.over)}</span>}
           <div className="b clamp2" style={{ fontSize: 14.5, lineHeight: 1.3 }}>{p.name}</div>
-          <div className="row" style={{ gap: 8, marginTop: 5 }}><span className="price" style={{ fontSize: 17 }}>{priceOf(p)}</span><Rating value={p.rating} count={p.reviews} /></div>
+          <div className="row" style={{ gap: 8, marginTop: 5 }}><span className="price" style={{ fontSize: 17 }}>{r.rent ? rentRate(p) : priceOf(p)}</span><Rating value={p.rating} count={p.reviews} /></div>
           <div className="tiny muted" style={{ marginTop: 2 }}>{p.fresh}</div>
           <div className="row tiny" style={{ gap: 4, marginTop: 6 }}><span className="b clamp1">{b.name}</span><Verified biz={b} size={13} /><span className="muted" style={{ flex: 'none' }}>· {app.distLabel(b)}</span></div>
         </div>
       </button>
       <div className="why">
         <span className="b">Why this matches</span>
-        <ul>{whyFor(p, r.over, f, app).map((w) => <li key={w}>{w}</li>)}</ul>
+        <ul>{whyFor(p, r.over, f, app, r.rent).map((w) => <li key={w}>{w}</li>)}</ul>
       </div>
       <div className="acts">
         <button className="btn soft sm" onClick={() => app.go('product', p.id)}><Eye size={15} />View</button>

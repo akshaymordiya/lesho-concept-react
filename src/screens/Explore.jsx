@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Search, MapPin, ChevronDown, ChevronRight, SlidersHorizontal, Map as MapIcon, List, X, SearchX, MapPinOff, Info, ArrowUpDown, Sparkles, Plus, Minus, LocateFixed } from 'lucide-react'
+import { Search, MapPin, ChevronDown, ChevronRight, SlidersHorizontal, Map as MapIcon, List, X, SearchX, MapPinOff, Info, ArrowUpDown, Sparkles, Plus, Minus, LocateFixed, KeyRound } from 'lucide-react'
 import { useApp, Img, Chip, ProductCard, BizCard, EventCard, Sheet, Empty, Note, CatIcon, CheckRow, Verified, Rating, inr, priceOf } from '../ui.jsx'
 import { CATS, cat as catOf } from '../data.js'
 
@@ -17,6 +17,7 @@ export default function Explore() {
   const [flt, setFlt] = useState(NO_FLT)
   const [view, setView] = useState('list')
   const [pin, setPin] = useState(null)
+  const [rentOnly, setRentOnly] = useState(false)
   const [sheet, setSheet] = useState(null)
   const seedT = useRef(0)
 
@@ -28,11 +29,12 @@ export default function Explore() {
     if (s.cat) { setCatId(s.cat); setType(s.cat === 'events' ? 'event' : 'product') }
     if (s.type) setType(s.type)
     if (s.view) setView(s.view)
+    if (s.rent) { setRentOnly(true); setType('product'); if (!s.cat) setCatId('all') }
     app.setExploreSeed(null)
   }, [app.exploreSeed])
   useEffect(() => { setPin(null) }, [type, catId, app.area.id])
 
-  const pickCat = (id) => { setCatId(id); if (id === 'events') setType('event'); else if (type === 'event') setType('product') }
+  const pickCat = (id) => { setCatId(id); if (id === 'events' && !rentOnly) setType('event'); else if (type === 'event') setType('product') }
   const ql = q.trim().toLowerCase()
   const match = (...fields) => !ql || ql.split(/\s+/).every((w) => fields.some((f) => f && f.toLowerCase().includes(w)))
   const d = (b) => app.distOf(b) ?? 0
@@ -42,7 +44,7 @@ export default function Explore() {
   let items = []
   if (!app.area.remote) {
     if (type === 'product') {
-      items = app.products.filter((p) => inCat(p.cat) && match(p.name, p.tags.join(' '), app.biz(p.bizId).name, catOf(p.cat).label))
+      items = app.products.filter((p) => inCat(p.cat) && (!rentOnly || p.rent) && match(p.name, p.tags.join(' '), app.biz(p.bizId).name, catOf(p.cat).label))
         .filter((p) => (!flt.cap || p.price <= flt.cap) && (!flt.rate4 || p.rating >= 4.5) && (!flt.offer || app.offerFor(p.id)) && (!flt.verified || app.biz(p.bizId).verified) && inRadius(app.biz(p.bizId)))
       if (sort === 'dist') items.sort((a, b) => d(app.biz(a.bizId)) - d(app.biz(b.bizId)))
       if (sort === 'low') items.sort((a, b) => a.price - b.price)
@@ -58,7 +60,7 @@ export default function Explore() {
     }
   }
   const nFlt = (flt.cap ? 1 : 0) + flt.rate4 + flt.offer + flt.verified + (flt.radius ? 1 : 0)
-  const sponsored = type === 'product' && !ql && catId === 'all' && sort === 'rel' && !nFlt ? app.prod('h3') : null
+  const sponsored = type === 'product' && !rentOnly && !ql && catId === 'all' && sort === 'rel' && !nFlt ? app.prod('h3') : null
   const isMap = view === 'map'
 
   // Every result maps to the coordinates of the shop (or venue) behind it.
@@ -90,13 +92,14 @@ export default function Explore() {
 
         <div className="hscroll tight" style={{ marginTop: 12 }}>
           <Chip on={catId === 'all'} onClick={() => pickCat('all')}>All</Chip>
+          <Chip className="blue" on={rentOnly} onClick={() => { setRentOnly(!rentOnly); if (!rentOnly) setType('product') }}><KeyRound size={15} />For rent</Chip>
           {CATS.map((c) => <Chip key={c.id} on={catId === c.id} onClick={() => pickCat(c.id)}><CatIcon id={c.id} size={15} />{c.label}</Chip>)}
         </div>
 
         <div className="pad" style={{ marginTop: 12 }}>
           <div className="seg" role="tablist">
             {[['product', 'Products & services'], ['biz', 'Businesses'], ['event', 'Events']].map(([id, l]) => (
-              <button key={id} role="tab" aria-selected={type === id} className={type === id ? 'on' : ''} onClick={() => { setType(id); if (id === 'event') setCatId('events'); else if (catId === 'events') setCatId('all') }}>{l}</button>
+              <button key={id} role="tab" aria-selected={type === id} className={type === id ? 'on' : ''} onClick={() => { setType(id); if (id === 'event') { setCatId('events'); setRentOnly(false) } else { if (id === 'biz') setRentOnly(false); if (type === 'event' && catId === 'events') setCatId('all') } }}>{l}</button>
             ))}
           </div>
           <div className="between" style={{ marginTop: 12 }}>
@@ -110,7 +113,7 @@ export default function Explore() {
             </div>
           </div>
           <div className="tiny muted" style={{ marginTop: 10 }}>
-            {app.area.remote ? '' : `${items.length} result${items.length === 1 ? '' : 's'}${isMap && type === 'product' ? ` at ${pins.length} shop${pins.length === 1 ? '' : 's'}` : ''}${ql ? ` for “${q.trim()}”` : ''}${flt.radius ? ` within ${flt.radius} km` : ''} · distances from ${app.area.name} centre`}
+            {app.area.remote ? '' : `${items.length} ${rentOnly ? 'rental' : 'result'}${items.length === 1 ? '' : 's'}${isMap && type === 'product' ? ` at ${pins.length} shop${pins.length === 1 ? '' : 's'}` : ''}${ql ? ` for “${q.trim()}”` : ''}${flt.radius ? ` within ${flt.radius} km` : ''} · distances from ${app.area.name} centre`}
           </div>
         </div>
 

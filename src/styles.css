@@ -498,3 +498,17 @@ table.cmp tr:first-child td, table.cmp tr:first-child th { border-top: 0; }
 .chatbar input { flex: 1; border: 0; outline: 0; height: 44px; font-size: 14.5px; min-width: 0; background: transparent; }
 .homebtn { position: relative; }
 .homebtn .unread { position: absolute; top: -4px; right: -4px; border: 2px solid #fff; height: 22px; min-width: 22px; background: var(--orange); color: var(--ink); }
+
+/* ---------- Rentals ---------- */
+.rates { display: flex; gap: 8px; padding: 14px 16px 6px; }
+.rates > div { flex: 1; background: var(--bg); border-radius: var(--r-md); padding: 10px 10px 9px; min-width: 0; }
+.rates b { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+.rates span { font-size: 11.5px; color: var(--muted); line-height: 1.25; display: block; margin-top: 2px; }
+.avail { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.avail > * { height: 44px; border-radius: 11px; background: var(--green-50); color: var(--green); font-size: 13px; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+.avail i { font-style: normal; font-size: 9.5px; font-weight: 700; opacity: .7; }
+.avail .off { background: var(--bg); color: var(--faint); text-decoration: line-through; }
+.avail.pick > * { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+.avail.pick .off { background: var(--ink); color: #fff; border-color: var(--ink); text-decoration: none; }
+.chip.daychip { flex-direction: column; gap: 0; min-height: 56px; padding: 0 14px; border-radius: 16px; min-width: 66px; }
+.chip.daychip:disabled { opacity: .45; background: var(--bg); text-decoration: line-through; cursor: not-allowed; }

@@ -10,11 +10,12 @@ import Viewer, { StoryViewer } from './screens/Viewer.jsx'
 import { LeadSheet, VisitIntent, RefConfirm, ReviewComposer, AreaSheet } from './screens/Flows.jsx'
 import { Saved, Profile, Onboarding } from './screens/Me.jsx'
 import { Activity, Chat, QrPopover } from './screens/Activity.jsx'
+import { RentRequest } from './screens/Rental.jsx'
 import { MDashboard, MLeads, MLeadDetail, MCreate, MCatalogue, MAnalytics } from './screens/Merchant.jsx'
 
 const SCREENS = {
   home: Home, explore: Explore, guide: Guide, saved: Saved, profile: Profile,
-  product: ProductDetail, biz: BusinessProfile, event: EventDetail, offer: OfferDetail, viewer: Viewer, story: StoryViewer, activity: Activity, chat: Chat, visit: VisitIntent, ref: RefConfirm,
+  product: ProductDetail, biz: BusinessProfile, event: EventDetail, offer: OfferDetail, viewer: Viewer, story: StoryViewer, activity: Activity, chat: Chat, rent: RentRequest, visit: VisitIntent, ref: RefConfirm,
   mdash: MDashboard, mleads: MLeads, mlead: MLeadDetail, mcreate: MCreate, mcat: MCatalogue, manalytics: MAnalytics,
 }
 const C_TABS = [['home', 'Home', HomeIcon], ['explore', 'Explore', Compass], ['guide', 'Guide', Sparkles], ['saved', 'Saved', Bookmark], ['profile', 'You', User]]
@@ -112,6 +113,7 @@ export default function App() {
       // Creates a consumer reference; leads for the demo merchant (b1) also land in the merchant inbox.
       // ----- In-app messaging: one thread per enquiry, shared by customer and business -----
       chats, typing, unreadFor,
+      systemMessage: (id, text) => pushMsg(id, { from: 'system', text }),
       unreadTotal: (side) => (side === 'merchant' ? leads : refs).reduce((n, x) => n + unreadFor(side, x.id), 0),
       refStatus: (r) => { const l = leads.find((x) => x.id === r.id); return l && l.status !== 'New' ? l.status : r.status },
       markRead: (side, id) => { const n = (chats[id] || []).length; if ((lastRead[side]?.[id] || 0) !== n) setLastRead((x) => ({ ...x, [side]: { ...x[side], [id]: n } })) },
@@ -133,7 +135,7 @@ export default function App() {
           const lead = leads.find((x) => x.id === id)
           if (!lead) return
           // A reply through Lesho is evidence the business contacted the customer.
-          if (/^(New|Acknowledged)$/.test(lead.status)) setLeads((ls) => ls.map((x) => (x.id === id ? { ...x, status: 'Contacted', billable: x.kind === 'enquiry' ? 'yes' : x.billable } : x)))
+          if (!lead.rental && /^(New|Acknowledged)$/.test(lead.status)) setLeads((ls) => ls.map((x) => (x.id === id ? { ...x, status: 'Contacted', billable: x.kind === 'enquiry' ? 'yes' : x.billable } : x)))
           if (lead.consumer !== 'Aarav M.' && !autoDone.current[id]) {
             autoDone.current[id] = true
             setTyping((t) => ({ ...t, [id]: 'consumer' }))
@@ -150,7 +152,7 @@ export default function App() {
         const ref = { ...r, id, created: 'Today, just now', status: r.status || 'Sent to business' }
         setRefs((x) => [ref, ...x])
         if (r.bizId === 'b1') setLeads((l) => [{ id, kind: r.kind === 'enquiry' ? 'enquiry' : 'intent', typeLabel: r.typeLabel, consumer: 'Aarav M.', subject: r.subject,
-          source: r.source || 'Product page', created: 'Today, just now', status: 'New', details: r.details || [], note: r.note || '', billable: 'pending' }, ...l])
+          source: r.source || 'Product page', created: 'Today, just now', status: 'New', details: r.details || [], note: r.note || '', billable: 'pending', ...(r.rental ? { rental: r.rental } : {}) }, ...l])
         return id
       },
       // Call / WhatsApp / directions are recorded as clicks only — never as contact or conversion.
@@ -205,6 +207,8 @@ export default function App() {
             <button onClick={() => jump('consumer', ['home'], ['viewer', 'dp1'])}>Photo dump</button>
             <button onClick={() => jump('consumer', ['home'], ['viewer', 'pv1'])}>Review post</button>
             <button onClick={() => jump('consumer', ['home'], ['offer', 'o1'])}>Offer</button>
+            <button onClick={() => jump('consumer', ['home'], ['product', 'rt5'])}>Rental listing</button>
+            <button onClick={() => jump('consumer', ['home'], ['product', 'p6'], ['rent', 'p6'])}>Rent request</button>
             <button onClick={() => jump('consumer', ['home'], ['biz', 'b4'])}>Restaurant</button>
             <button onClick={() => jump('consumer', ['home'], ['biz', 'b4'], ['visit', 'b4'])}>Visit intent</button>
             <button onClick={() => jump('consumer', ['home'], ['event', 'ev1'])}>Event</button>
@@ -219,6 +223,7 @@ export default function App() {
             <button onClick={() => jump('merchant', ['mdash'])}>Dashboard</button>
             <button onClick={() => jump('merchant', ['mleads'])}>Lead inbox</button>
             <button onClick={() => jump('merchant', ['mleads'], ['chat', 'LSH-ENQ-7Q2X8'])}>Customer chat</button>
+            <button onClick={() => jump('merchant', ['mleads'], ['mlead', 'LSH-RNT-4K8QD'])}>Rental request</button>
             <button onClick={() => jump('merchant', ['mcreate'])}>Create content</button>
             <button onClick={() => jump('merchant', ['mcat'])}>Catalogue</button>
             <button onClick={() => jump('merchant', ['manalytics'])}>Analytics</button>

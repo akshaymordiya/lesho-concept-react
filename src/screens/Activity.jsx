@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Search, X, Send, CalendarCheck, Ticket, Tag, MessageSquareText, ChevronRight, Copy, Info, ShieldCheck, QrCode, ClipboardList, ArrowLeft, ArrowUp, SearchX, Maximize2, ArrowLeftRight } from 'lucide-react'
+import { Search, X, Send, CalendarCheck, Ticket, Tag, MessageSquareText, ChevronRight, Copy, Info, ShieldCheck, QrCode, ClipboardList, ArrowLeft, ArrowUp, SearchX, Maximize2, ArrowLeftRight, KeyRound } from 'lucide-react'
 import { useApp, TopBar, Chip, Empty, MockCode, Verified, Note, statusTone, isPast } from '../ui.jsx'
 
-const REF_ICON = { visit: CalendarCheck, event: Ticket, offer: Tag, enquiry: Send }
+const REF_ICON = { visit: CalendarCheck, event: Ticket, offer: Tag, enquiry: Send, rental: KeyRound }
 const has = (q, ...fields) => !q || q.split(/\s+/).every((w) => fields.some((f) => f && f.toLowerCase().includes(w)))
 
 /* Enlarged reference code, centred over the current screen. */
@@ -104,7 +104,8 @@ export function Activity({ param }) {
   const all = app.refs.map((r) => ({ r, status: app.refStatus(r) }))
   const match = all.filter(({ r, status }) => has(ql, r.id, r.typeLabel, r.subject, app.biz(r.bizId).name, status, (r.details || []).join(' ')))
   const active = match.filter((x) => !isPast(x.status)), past = match.filter((x) => isPast(x.status))
-  const shown = f === 'active' ? active : f === 'past' ? past : match
+  const rentals = match.filter((x) => x.r.kind === 'rental')
+  const shown = f === 'active' ? active : f === 'past' ? past : f === 'rent' ? rentals : match
   const unread = app.unreadTotal('consumer')
   return (
     <div className="screen grey">
@@ -122,10 +123,11 @@ export function Activity({ param }) {
 
         {tab === 'enquiries' ? (
           <>
-            <div className="row" style={{ marginTop: 12, gap: 8 }}>
+            <div className="hscroll tight" style={{ margin: '12px -20px 0' }}>
               <Chip on={f === 'all'} onClick={() => setF('all')}>All {match.length}</Chip>
               <Chip on={f === 'active'} onClick={() => setF('active')}>Active {active.length}</Chip>
               <Chip on={f === 'past'} onClick={() => setF('past')}>Past {past.length}</Chip>
+              <Chip on={f === 'rent'} onClick={() => setF('rent')}><KeyRound size={14} />Rentals {rentals.length}</Chip>
             </div>
             {shown.length === 0 ? (
               all.length === 0
