@@ -1,35 +1,26 @@
-# Lesho — interactive concept preview
+# Lesho
 
-A frontend-only React prototype of Lesho, a local-commerce discovery and lead-generation
-concept. See `LESHO_PRODUCT_CONCEPT_AND_FABLE5_PROMPT.md` for the product definition.
+Local-commerce discovery and lead generation: social in format, commerce-first in purpose.
 
-## Run
+## Repository layout
+
+| Path | What it is | Status |
+| --- | --- | --- |
+| `concept/` | Interactive React prototype with mock data. The visual and behavioural reference for the product. | Complete |
+| `docs/` | Product, design, architecture, data model, API, security and task documentation. Start at `docs/README.md`. | Complete, v1 |
+| `backend/` | Production API and workers. | Not started. See `docs/06-backend-tasks.md` |
+| `frontend/` | Production client applications. | Not started. See `docs/07-frontend-tasks.md` |
+
+## Run the concept prototype
 
 ```bash
+cd concept
 npm install
 npm run dev      # http://localhost:5180
-npm run build    # production bundle in dist/
 ```
 
-On desktop the app sits in a phone frame with a side panel that jumps to any screen and
-switches between the consumer and merchant views. Under 520 px wide it fills the viewport.
-Screens are also addressable by hash, e.g. `#/c/product/p1`, `#/c/viewer/dp1`, `#/m/mleads`.
+## Where to start
 
-## Structure
-
-- `src/data.js` — all mock data (Ahmedabad businesses, catalogue, posts, offers, events, reviews, leads)
-- `src/styles.css` — design tokens and component styles
-- `src/ui.jsx` — shared components (cards, sheets, image with fallback, mock reference code)
-- `src/App.jsx` — state, stack navigation, device frame
-- Rentals: any catalogue item can be listed to sell, rent out, or both (`rent` on a product in `src/data.js`; screens in `src/screens/Rental.jsx`). Customers send a dated rental request; the shop accepts, hands over against the reference and marks the return. No payment or deposit is handled in the app.
-- Entertainment: cinemas, theatres and arcades list showtimes, activities, events and coupon codes. Claiming a coupon reveals the code and creates a reference; tickets and seats are never sold or held in the app.
-- `src/screens/` — Home, Guide (mock AI), Explore, Detail (product, business, event, offer),
-  Viewer (vertical reels feed, stories, photo-dump carousel, review), Flows (enquiry, visit intent, confirmation, review), Me, Merchant
-
-## What is simulated
-
-Everything is local state and resets on reload. There is no backend, AI model, map, payment,
-upload or messaging. The guide is deterministic keyword matching over the mock catalogue.
-Reels and stories are still images with motion and timers. The Explore map is an illustrative drawing, not real cartography. Reference codes are decorative, not scannable.
-Photos load from the Unsplash CDN and fall back to a neutral tile when offline.
-Lead prices in the merchant view are sample figures; pricing is an open product decision.
+- Building the backend: read `docs/README.md`, then `docs/02-architecture.md`, `docs/03-data-model.md`, `docs/04-api-conventions.md`, then work through `docs/06-backend-tasks.md` in order.
+- Building the frontend: read `docs/01-design-system.md`, run the prototype, then work through `docs/07-frontend-tasks.md` in order.
+- Each feature area has its own file in `docs/modules/` with rules, endpoints, payloads, real-time behaviour and edge cases.
