@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Check, Minus, Plus, Info, AlertCircle, Copy, MapPin, LocateFixed, Camera, Star, CalendarCheck, Ticket, Tag, Send, ShieldCheck, X, MessageSquareText, KeyRound } from 'lucide-react'
-import { useApp, Sheet, Chip, Note, CheckRow, TopBar, MockCode, Img, Verified } from '../ui.jsx'
+import { Check, Minus, Plus, Info, AlertCircle, Copy, MapPin, LocateFixed, Camera, Star, CalendarCheck, Ticket, Tag, Send, ShieldCheck, X, MessageSquareText, KeyRound, Hourglass } from 'lucide-react'
+import { useApp, Sheet, Chip, Note, CheckRow, TopBar, MockCode, Img, Verified, Countdown } from '../ui.jsx'
 import { cat as catOf, SAMPLE_MEDIA, USER } from '../data.js'
 import { RentalSummary, rentalStep } from './Rental.jsx'
 
@@ -166,6 +166,7 @@ export function RefConfirm({ param }) {
   const lead = app.leads.find((l) => l.id === r.id)
   const acked = (lead && lead.status !== 'New') || /Contacted|Visited|confirmed/i.test(r.status)
   const status = lead && lead.status !== 'New' ? lead.status : r.status
+  const shown = app.refStatus(r), expired = /^Expired — not used/.test(shown), ticking = r.expiresAt && /^Claimed/.test(shown)
   const doneN = r.kind === 'rental' ? rentalStep(status) : /Visited|redeemed|Converted/i.test(lead?.status || r.status) ? 4 : acked ? 3 : 2
   const I = copy.icon
   return (
@@ -176,17 +177,26 @@ export function RefConfirm({ param }) {
       </div>
       <div className="pad" style={{ paddingBottom: 28 }}>
         <div className="okmark"><I size={30} /></div>
-        <h1 className="h1" style={{ textAlign: 'center', marginTop: 16, fontSize: 22 }}>{r.typeLabel === 'Appointment request' ? 'Appointment request sent' : r.typeLabel === 'Quotation request' ? 'Quotation request sent' : r.code ? 'Coupon claimed' : copy.title}</h1>
-        <p className="small" style={{ textAlign: 'center', opacity: .75, marginTop: 8, padding: '0 6px' }}>{r.code ? `Use the code with ${b.name}. It applies a discount — it is not a ticket, and seats or slots are arranged with the venue.` : copy.sub(b.name)}</p>
+        <h1 className="h1" style={{ textAlign: 'center', marginTop: 16, fontSize: 22 }}>{expired ? 'Claim expired' : r.typeLabel === 'Appointment request' ? 'Appointment request sent' : r.typeLabel === 'Quotation request' ? 'Quotation request sent' : r.code ? 'Coupon claimed' : copy.title}</h1>
+        <p className="small" style={{ textAlign: 'center', opacity: .75, marginTop: 8, padding: '0 6px' }}>{expired ? `The time limit set by ${b.name} ran out before this claim was used.` : r.code ? `Use the code with ${b.name}. It applies a discount — it is not a ticket, and seats or slots are arranged with the venue.` : copy.sub(b.name)}</p>
 
         <div className="ticket" style={{ marginTop: 22 }}>
           <div className="between">
             <div className="grow"><div className="eyebrow">{r.typeLabel}</div><div className="b clamp2" style={{ marginTop: 2 }}>{r.subject}</div><div className="tiny muted row" style={{ gap: 4, marginTop: 2 }}>{b.name}<Verified biz={b} size={13} /></div></div>
           </div>
-          <span className="badge blue" style={{ marginTop: 10 }}>{lead && lead.status !== 'New' ? lead.status : r.status}</span>
+          <span className={`badge ${expired ? 'grey' : 'blue'}`} style={{ marginTop: 10 }}>{shown}</span>
           {r.details?.length > 0 && <div className="wrap" style={{ marginTop: 12, gap: 6 }}>{r.details.map((d) => <span key={d} className="badge grey" style={{ fontSize: 12, padding: '5px 10px' }}>{d}</span>)}</div>}
           {r.note && <p className="small muted" style={{ marginTop: 10 }}>“{r.note}”</p>}
-          {r.code && (
+          {ticking && (
+            <div className="timerbox">
+              <Hourglass size={18} />
+              <div className="grow"><div className="tiny b">Use it before the timer ends</div><div className="tiny muted">Your claim expires automatically if it isn't used in time.</div></div>
+              <Countdown until={r.expiresAt} />
+            </div>
+          )}
+          {expired && <div style={{ marginTop: 12 }}><Note tone="amber" icon={Hourglass}>This claim expired before it was used, so the reference can no longer be redeemed. If the offer is still running you can claim it again.</Note></div>}
+          {r.kind === 'offer' && !r.expiresAt && /^Claimed/.test(shown) && <div className="tiny muted" style={{ marginTop: 10 }}>No time limit after claiming — valid until the offer itself ends.</div>}
+          {r.code && !expired && (
             <div className="couponbox">
               <div><div className="eyebrow">Coupon code</div><div className="refcode" style={{ fontSize: 22 }}>{r.code}</div><div className="tiny muted">Use at: {(r.codeUse || []).join(' · ')}</div></div>
               <button className="btn soft sm" onClick={() => app.toast('Coupon code copied (simulated)')}><Copy size={14} />Copy</button>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import {
   Shirt, UtensilsCrossed, PartyPopper, Scissors, Smartphone, Sofa, Car, Dumbbell, Wrench, Clapperboard,
   Star, Bookmark, BadgeCheck, ArrowLeft, X, Check, MapPin, Play, Images, Tag, ChevronRight, Store, ImageOff, Megaphone, MessageSquareQuote, KeyRound,
@@ -308,3 +308,17 @@ export function MockCode({ seed, size }) {
 const notYet = (s) => /not yet/i.test(s)
 export const statusTone = (s) => !notYet(s) && /Visited|redeemed|Attended|Converted|confirmed|Returned/i.test(s) ? 'green' : /Expired|Cancelled|Invalid|Not interested|Unreachable|Disputed|Declined/i.test(s) ? 'grey' : 'blue'
 export const isPast = (s) => !notYet(s) && /Visited|redeemed|Attended|Converted|Expired|Cancelled|Invalid|Not interested|Returned|Declined/i.test(s)
+
+/* Claim expiry. A merchant may give a claim a time limit; with none, the claim lasts until the offer itself ends. */
+export const windowText = (mins) => !mins ? null : mins < 60 ? `${mins} minute${mins === 1 ? '' : 's'}` : mins < 1440 ? `${mins / 60} hour${mins === 60 ? '' : 's'}` : `${mins / 1440} day${mins === 1440 ? '' : 's'}`
+export const timeLeft = (ms) => {
+  if (ms <= 0) return 'Expired'
+  const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
+  const two = (n) => String(n).padStart(2, '0')
+  return d > 0 ? `${d}d ${h}h ${two(m)}m` : `${two(h)}:${two(m)}:${two(sec)}`
+}
+export function Countdown({ until }) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
+  return <span className="countdown" role="timer" aria-live="off">{timeLeft(until - now)}</span>
+}

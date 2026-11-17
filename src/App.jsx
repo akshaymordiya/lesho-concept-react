@@ -64,6 +64,14 @@ export default function App() {
   const [chats, setChats] = useState(SEED_CHATS)
   const [lastRead, setLastRead] = useState(SEED_READ)
   const [typing, setTyping] = useState({})
+  const [tick, setTick] = useState(0)
+  // Wake once when the next claim timer runs out so every screen reflects the expiry.
+  useEffect(() => {
+    const now = Date.now(), next = [...refs, ...leads].map((x) => x.expiresAt).filter((t) => t && t > now).sort((a, b) => a - b)[0]
+    if (!next) return
+    const t = setTimeout(() => setTick((n) => n + 1), Math.min(next - now + 60, 2 ** 31 - 1))
+    return () => clearTimeout(t)
+  }, [refs, leads, tick])
   const tsRef = useRef(1000), autoDone = useRef({}), timers = useRef([])
   useEffect(() => () => timers.current.forEach(clearTimeout), [])
 
@@ -115,7 +123,11 @@ export default function App() {
       chats, typing, unreadFor,
       systemMessage: (id, text) => pushMsg(id, { from: 'system', text }),
       unreadTotal: (side) => (side === 'merchant' ? leads : refs).reduce((n, x) => n + unreadFor(side, x.id), 0),
-      refStatus: (r) => { const l = leads.find((x) => x.id === r.id); return l && l.status !== 'New' ? l.status : r.status },
+      refStatus: (r) => {
+        const l = leads.find((x) => x.id === r.id), st = l && l.status !== 'New' ? l.status : r.status
+        return r.expiresAt && Date.now() > r.expiresAt && /^Claimed/.test(st) ? 'Expired — not used in time' : st
+      },
+      leadExpired: (l) => !!l.expiresAt && Date.now() > l.expiresAt && !/redeemed|Visited|Converted/.test(l.status),
       markRead: (side, id) => { const n = (chats[id] || []).length; if ((lastRead[side]?.[id] || 0) !== n) setLastRead((x) => ({ ...x, [side]: { ...x[side], [id]: n } })) },
       sendMessage: (id, from, text) => {
         pushMsg(id, { from, text })
@@ -149,10 +161,11 @@ export default function App() {
         const first = r.note || (r.kind === 'enquiry' || r.kind === 'event' ? (r.details || []).join(' · ') : '')
         setChats((c) => ({ ...c, [id]: [{ from: 'system', text: `${r.typeLabel} sent · ${id}`, time: 'Just now', ts: ++tsRef.current }, ...(first ? [{ from: 'consumer', text: first, time: 'Just now', ts: ++tsRef.current }] : [])] }))
         setLastRead((x) => ({ ...x, consumer: { ...x.consumer, [id]: first ? 2 : 1 }, merchant: { ...x.merchant, [id]: 1 } }))
-        const ref = { ...r, id, created: 'Today, just now', status: r.status || 'Sent to business' }
+        const stamp = r.claimWindow ? { claimedAt: Date.now(), expiresAt: Date.now() + r.claimWindow * 60000 } : {}
+        const ref = { ...r, ...stamp, id, created: 'Today, just now', status: r.status || 'Sent to business' }
         setRefs((x) => [ref, ...x])
         if (r.bizId === 'b1') setLeads((l) => [{ id, kind: r.kind === 'enquiry' ? 'enquiry' : 'intent', typeLabel: r.typeLabel, consumer: 'Aarav M.', subject: r.subject,
-          source: r.source || 'Product page', created: 'Today, just now', status: 'New', details: r.details || [], note: r.note || '', billable: 'pending', ...(r.rental ? { rental: r.rental } : {}) }, ...l])
+          source: r.source || 'Product page', created: 'Today, just now', status: 'New', details: r.details || [], note: r.note || '', billable: 'pending', ...stamp, ...(r.rental ? { rental: r.rental } : {}) }, ...l])
         return id
       },
       // Call / WhatsApp / directions are recorded as clicks only — never as contact or conversion.
@@ -172,7 +185,7 @@ export default function App() {
       addReview: (r) => setReviews((rs) => [r, ...rs]),
       restartOnboarding: () => { setStack([entry('home')]); setOnboarding(true) },
     }
-  }, [mode, area, products, posts, offers, events, stories, seenStories, sheet, chats, lastRead, typing, reviews, refs, leads, prefs, saved, liked, following, guideSeed, exploreSeed, toast])
+  }, [mode, area, products, posts, offers, events, stories, seenStories, sheet, chats, lastRead, typing, tick, reviews, refs, leads, prefs, saved, liked, following, guideSeed, exploreSeed, toast])
 
   const jump = (m, ...path) => {
     setOnboarding(false); setSheet(null); setModeRaw(m)

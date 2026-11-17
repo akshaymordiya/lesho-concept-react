@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Search, X, Send, CalendarCheck, Ticket, Tag, MessageSquareText, ChevronRight, Copy, Info, ShieldCheck, QrCode, ClipboardList, ArrowLeft, ArrowUp, SearchX, Maximize2, ArrowLeftRight, KeyRound } from 'lucide-react'
-import { useApp, TopBar, Chip, Empty, MockCode, Verified, Note, statusTone, isPast } from '../ui.jsx'
+import { Search, X, Send, CalendarCheck, Ticket, Tag, MessageSquareText, ChevronRight, Copy, Info, ShieldCheck, QrCode, ClipboardList, ArrowLeft, ArrowUp, SearchX, Maximize2, ArrowLeftRight, KeyRound, Hourglass } from 'lucide-react'
+import { useApp, TopBar, Chip, Empty, MockCode, Verified, Note, statusTone, isPast, Countdown } from '../ui.jsx'
 
 const REF_ICON = { visit: CalendarCheck, event: Ticket, offer: Tag, enquiry: Send, rental: KeyRound }
 const has = (q, ...fields) => !q || q.split(/\s+/).every((w) => fields.some((f) => f && f.toLowerCase().includes(w)))
@@ -21,6 +21,7 @@ export function QrPopover({ id }) {
         <div style={{ margin: '16px 0 12px' }}><MockCode seed={r.id} size={224} /></div>
         <div className="refcode">{r.id}</div>
         <span className={`badge ${statusTone(status)}`} style={{ marginTop: 8 }}>{status}</span>
+        {r.expiresAt && /^Claimed/.test(status) && <div className="timerline" style={{ justifyContent: 'center', marginTop: 10 }}><Hourglass size={15} />Expires in <Countdown until={r.expiresAt} /></div>}
         <p className="tiny muted" style={{ marginTop: 10 }}>Show this at the counter so the business can find your request. Decorative mock code for this preview — not a scannable QR.</p>
         <div className="row" style={{ marginTop: 14 }}>
           <button className="btn ghost grow" onClick={() => app.toast('Reference copied (simulated)')}><Copy size={16} />Copy</button>
@@ -51,7 +52,10 @@ function EnquiryCard({ r }) {
         </button>
       </div>
       <div className="between" style={{ marginTop: 10 }}>
-        <span className={`badge ${statusTone(status)}`}>{status}</span>
+        <span className="wrap" style={{ gap: 6 }}>
+          <span className={`badge ${statusTone(status)}`}>{status}</span>
+          {r.expiresAt && /^Claimed/.test(status) && <span className="badge orange"><Hourglass size={11} /><Countdown until={r.expiresAt} /></span>}
+        </span>
         <button className={`btn sm ${unread ? 'primary' : 'soft'}`} onClick={() => app.go('chat', r.id)}><MessageSquareText size={15} />{unread ? `${unread} new message${unread > 1 ? 's' : ''}` : 'Message'}</button>
       </div>
     </div>

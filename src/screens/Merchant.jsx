@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import {
   Inbox, CheckCheck, Footprints, IndianRupee, ChevronRight, MousePointerClick, MessageSquareText, CalendarCheck, BadgeCheck, ArrowLeftRight, Search,
-  Film, Image as ImageIcon, Images, Tag, Megaphone, PartyPopper, Package, Plus, Pencil, Info, Check, Flag, AlertCircle, Eye, ArrowLeft, Link2, Play, Receipt, Timer, KeyRound, Minus,
+  Film, Image as ImageIcon, Images, Tag, Megaphone, PartyPopper, Package, Plus, Pencil, Info, Check, Flag, AlertCircle, Eye, ArrowLeft, Link2, Play, Receipt, Timer, KeyRound, Minus, Hourglass, Crown,
 } from 'lucide-react'
-import { useApp, Img, TopBar, Chip, Note, Sheet, Empty, Verified, inr, priceOf } from '../ui.jsx'
-import { ANALYTICS, PRICING, SAMPLE_MEDIA, CATS } from '../data.js'
+import { useApp, Img, TopBar, Chip, Note, Sheet, Empty, Verified, inr, priceOf, Countdown, windowText } from '../ui.jsx'
+import { ANALYTICS, PRICING, SAMPLE_MEDIA, CATS, CLAIM_WINDOWS } from '../data.js'
 import { RentalLeadActions, RentalsStrip, dayAt, dayLabel } from './Rental.jsx'
 import { ConversationList } from './Activity.jsx'
 
@@ -27,10 +27,10 @@ function LeadCard({ l }) {
       <span className="row" style={{ alignItems: 'flex-start' }}>
         <span className={`kind ${l.kind}`}><K.icon size={18} /></span>
         <span className="grow">
-          <span className="between"><span className="b small clamp1">{l.typeLabel}</span><span className={`badge ${statusTone(l.status)}`}>{l.status}</span></span>
+          <span className="between"><span className="b small clamp1">{l.typeLabel}</span><span className={`badge ${app.leadExpired(l) ? 'grey' : statusTone(l.status)}`}>{app.leadExpired(l) ? 'Expired' : l.status}</span></span>
           <span className="small clamp1" style={{ display: 'block', marginTop: 2 }}>{l.subject}</span>
           <span className="tiny muted clamp1" style={{ display: 'block', marginTop: 4 }}>{l.consumer} · via {l.source} · {l.created}</span>
-          <span className="row" style={{ marginTop: 8, gap: 6 }}><span className="badge grey">{K.label}</span><span className="badge grey">{billLabel(l)}</span>{app.unreadFor('merchant', l.id) > 0 && <span className="badge blue"><MessageSquareText size={11} />{app.unreadFor('merchant', l.id)} new</span>}</span>
+          <span className="row" style={{ marginTop: 8, gap: 6 }}><span className="badge grey">{K.label}</span><span className="badge grey">{app.leadExpired(l) ? 'Not billed' : billLabel(l)}</span>{l.expiresAt && !app.leadExpired(l) && /New|Acknowledged|Contacted/.test(l.status) && <span className="badge orange"><Hourglass size={11} /><Countdown until={l.expiresAt} /></span>}{app.unreadFor('merchant', l.id) > 0 && <span className="badge blue"><MessageSquareText size={11} />{app.unreadFor('merchant', l.id)} new</span>}</span>
         </span>
       </span>
     </button>
@@ -156,7 +156,8 @@ export function MLeadDetail({ param }) {
   const l = app.leads.find((x) => x.id === param)
   if (!l) return <div className="screen"><TopBar title="Lead" /></div>
   const K = KIND[l.kind], isClick = l.kind === 'click'
-  const closed = /Invalid|Disputed|redeemed|Visited|Converted/.test(l.status)
+  const lapsed = app.leadExpired(l)
+  const closed = lapsed || /Invalid|Disputed|redeemed|Visited|Converted/.test(l.status)
   const set = (status, extra = {}) => { app.updateLead(l.id, { status, ...extra }); app.toast(`Status updated: ${status}`) }
   return (
     <div className="screen grey">
@@ -174,7 +175,8 @@ export function MLeadDetail({ param }) {
             <div className="kv"><span>Source</span><span>{l.source}</span></div>
             <div className="kv"><span>About</span><span>{l.subject}</span></div>
             <div className="kv"><span>Customer</span><span>{l.consumer}{!isClick && <><br /><span className="muted" style={{ fontWeight: 500 }}>Phone shared with consent</span></>}</span></div>
-            <div className="kv"><span>Billing</span><span>{billLabel(l)}</span></div>
+            {l.expiresAt && <div className="kv"><span>Claim expiry</span><span>{lapsed ? 'Expired — not used in time' : /redeemed/.test(l.status) ? 'Redeemed in time' : <>Expires in <Countdown until={l.expiresAt} /></>}</span></div>}
+            <div className="kv"><span>Billing</span><span>{lapsed ? 'Not billed' : billLabel(l)}</span></div>
           </div>
         </div>
 
@@ -197,8 +199,8 @@ export function MLeadDetail({ param }) {
         {isClick ? (
           <div style={{ marginTop: 12 }}><Note icon={Info}>Clicks are shown for context only. They are never billed and never counted as a contact, visit or sale.</Note></div>
         ) : l.rental ? null : closed ? (
-          <div style={{ marginTop: 12 }}><Note icon={Info} tone={/Invalid|Disputed/.test(l.status) ? 'amber' : 'green'}>
-            {/Invalid/.test(l.status) ? 'Flagged under the duplicate rule and excluded from billing.' : /Disputed/.test(l.status) ? 'Dispute raised. Billing for this lead is on hold while Lesho reviews it.' : 'This lead has reached an evidenced outcome.'}
+          <div style={{ marginTop: 12 }}><Note icon={Info} tone={lapsed || /Invalid|Disputed/.test(l.status) ? 'amber' : 'green'}>
+            {lapsed ? 'This claim passed the time limit you set, so it can no longer be redeemed. It is not billed.' : /Invalid/.test(l.status) ? 'Flagged under the duplicate rule and excluded from billing.' : /Disputed/.test(l.status) ? 'Dispute raised. Billing for this lead is on hold while Lesho reviews it.' : 'This lead has reached an evidenced outcome.'}
           </Note></div>
         ) : (
           <div className="card padded" style={{ marginTop: 12 }}>
@@ -207,7 +209,7 @@ export function MLeadDetail({ param }) {
             <div className="tiny muted" style={{ margin: '14px 0 8px' }}>Reported by you</div>
             <div className="wrap">{NEXT.map((s) => <Chip key={s} on={l.status === s} onClick={() => set(s, /Contacted|Qualified/.test(s) && l.kind === 'enquiry' ? { billable: 'yes' } : {})}>{s}</Chip>)}</div>
             <div className="tiny muted" style={{ margin: '16px 0 8px' }}>Evidence-backed</div>
-            <button className="btn soft block" onClick={() => set(/Offer/.test(l.typeLabel) ? 'Offer redeemed' : 'Visited', { kind: 'verified', billable: 'yes', details: [...(l.details || []), 'Reference checked at the counter'] })}>
+            <button className="btn soft block" onClick={() => set(/Offer|Coupon/.test(l.typeLabel) ? 'Offer redeemed' : 'Visited', { kind: 'verified', billable: 'yes', details: [...(l.details || []), 'Reference checked at the counter'] })}>
               <BadgeCheck size={18} />Customer showed this reference in store
             </button>
             <button className="btn ghost block" style={{ marginTop: 8 }} onClick={() => set('Converted', { note: l.note, details: [...(l.details || []), 'Sale reported by merchant'] })}>Report a sale (merchant-reported)</button>
@@ -369,7 +371,7 @@ const TYPES = [
 export function MCreate() {
   const app = useApp()
   const [type, setType] = useState(null)
-  const [d, setD] = useState({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '', code: '' })
+  const [d, setD] = useState({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '', code: '', win: null })
   const [tried, setTried] = useState(false)
   const [done, setDone] = useState(null)
   const composing = !!type && type !== 'product' && type !== 'rental' && !done
@@ -386,7 +388,7 @@ export function MCreate() {
     valid: type === 'offer' && !d.valid.trim(),
     date: type === 'event' && (!d.date.trim() || !d.venue.trim()),
   }
-  const start = (id) => { setType(id); setTried(false); setDone(null); setD({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '', code: '' }) }
+  const start = (id) => { setType(id); setTried(false); setDone(null); setD({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '', code: '', win: null }) }
   const pickMedia = (m) => setD((x) => ({ ...x, media: multi ? (x.media.includes(m) ? x.media.filter((y) => y !== m) : [...x.media, m]) : [m] }))
   const pickLink = (id) => setD((x) => ({ ...x, links: x.links.includes(id) ? x.links.filter((y) => y !== id) : [...x.links, id] }))
 
@@ -395,7 +397,7 @@ export function MCreate() {
     if (Object.values(bad).some(Boolean)) { app.toast('Please complete the highlighted fields'); return }
     const id = `${type}-${Date.now()}`
     if (type === 'offer') {
-      app.addOffer({ id, bizId: ME, title: d.title.trim(), short: 'New offer', valid: d.valid.trim(), products: d.links, branch: 'CG Road branch', min: 'See terms', limit: 'One per customer', ...(d.code.trim() ? { code: d.code.trim().toUpperCase(), use: ['At the store'] } : {}),
+      app.addOffer({ id, bizId: ME, title: d.title.trim(), short: 'New offer', valid: d.valid.trim(), products: d.links, branch: 'CG Road branch', min: 'See terms', limit: 'One per customer', ...(d.win ? { claimWindow: d.win } : {}), ...(d.code.trim() ? { code: d.code.trim().toUpperCase(), use: ['At the store'] } : {}),
         steps: ['Claim the offer to get a Lesho reference', 'Show the reference at the billing counter', 'The store checks the code and applies the offer'], terms: (d.terms.trim() || 'Standard store terms apply').split('\n').filter(Boolean) })
       setDone({ go: ['offer', id], label: 'offer' })
     } else if (type === 'story') {
@@ -480,6 +482,14 @@ export function MCreate() {
               {tried && bad.valid && <Err>Offers need a validity so customers know when they end.</Err>}</label>
           )}
           {type === 'offer' && (
+            <div style={{ marginTop: 14 }}>
+              <div className="row" style={{ gap: 8 }}><span className="b small">Claim expiry</span><span className="badge dark"><Crown size={11} />Premium</span></div>
+              <div className="tiny muted" style={{ margin: '2px 0 8px' }}>How long a customer has to use the offer after claiming it. Choose Never to let a claim last until the offer ends.</div>
+              <div className="wrap" role="radiogroup" aria-label="Claim expiry">{CLAIM_WINDOWS.map(([m, l]) => <button key={l} role="radio" aria-checked={d.win === m} className={`chip ${d.win === m ? 'on' : ''}`} onClick={() => setD({ ...d, win: m })}>{l}</button>)}</div>
+              <div className="tiny muted" style={{ marginTop: 8 }}>{d.win ? `Customers see a live timer. A claim not used within ${windowText(d.win)} expires on its own and is not billed.` : 'Claims never expire on their own; customers can use them any time before the offer ends.'}</div>
+            </div>
+          )}
+          {type === 'offer' && (
             <label className="field" style={{ marginTop: 12 }}><span className="lbl">Coupon code (optional)</span>
               <input className="input" value={d.code} onChange={(e) => setD({ ...d, code: e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toUpperCase() })} placeholder="e.g. SILK500" aria-label="Coupon code" />
               <span className="tiny muted" style={{ display: 'block', marginTop: 6 }}>Customers see the code only after they claim. Each claim still gets its own Lesho reference so you can count redemptions.</span></label>
@@ -521,7 +531,7 @@ export function MCreate() {
               <span className="cut"><Tag size={18} /></span>
               <div className="eyebrow" style={{ color: 'var(--orange-ink)' }}>Fashion</div>
               <div className="h3" style={{ marginTop: 6, paddingRight: 50 }}>{d.title || 'Your offer title'}</div>
-              <div className="small b" style={{ marginTop: 10 }}>Rangoli Silks</div><div className="tiny muted">{d.valid || 'Validity'} · {d.links.length} eligible item{d.links.length === 1 ? '' : 's'}</div>
+              <div className="small b" style={{ marginTop: 10 }}>Rangoli Silks</div><div className="tiny muted">{d.valid || 'Validity'} · {d.links.length} eligible item{d.links.length === 1 ? '' : 's'} · {d.win ? `use within ${windowText(d.win)} of claiming` : 'no claim time limit'}</div>
             </div>
           ) : (
             <div className="row" style={{ alignItems: 'flex-start', gap: 14 }}>

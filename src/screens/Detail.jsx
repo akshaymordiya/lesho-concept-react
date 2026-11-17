@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import {
   Share2, Phone, Navigation, MessageCircle, MapPin, Clock, ChevronRight, Info, Tag, ShieldCheck, ShieldQuestion, CalendarDays, Ticket, Play,
-  ExternalLink, PenLine, KeyRound, Clapperboard, Copy, UserPlus, UserCheck, CalendarCheck, Check, Store, Users, MessageSquareText,
+  ExternalLink, PenLine, KeyRound, Clapperboard, Copy, Hourglass, UserPlus, UserCheck, CalendarCheck, Check, Store, Users, MessageSquareText,
 } from 'lucide-react'
-import { useApp, Img, TopBar, SaveBtn, Verified, Rating, Stars, Note, Chip, ProductCard, ProductRow, ReviewCard, OfferCard, EventCard, PostTile, Empty, priceOf, CatIcon } from '../ui.jsx'
+import { Countdown, windowText, useApp, Img, TopBar, SaveBtn, Verified, Rating, Stars, Note, Chip, ProductCard, ProductRow, ReviewCard, OfferCard, EventCard, PostTile, Empty, priceOf, CatIcon } from '../ui.jsx'
 import { cat as catOf } from '../data.js'
 import { RentalBlock, rentLabel } from './Rental.jsx'
 
@@ -322,15 +322,18 @@ export function EventDetail({ param }) {
 export function OfferDetail({ param }) {
   const app = useApp()
   const o = app.offer(param), b = app.biz(o.bizId)
-  const mine = app.refs.find((r) => r.offerId === o.id)
+  const claims = app.refs.filter((r) => r.offerId === o.id)
+  const mine = claims.find((r) => !/Expired/.test(app.refStatus(r)))
+  const lapsed = !mine && claims.length > 0
+  const ticking = mine && mine.expiresAt && /^Claimed/.test(app.refStatus(mine))
   const [agree, setAgree] = useState(false)
   const claim = () => {
-    const id = app.addRef({ prefix: 'OFR', kind: 'offer', typeLabel: o.code ? 'Coupon claim' : 'Offer claim', bizId: b.id, offerId: o.id, subject: o.title, source: 'Offer detail', details: [o.valid, o.branch], status: 'Claimed — not yet redeemed', ...(o.code ? { code: o.code, codeUse: o.use } : {}) })
+    const id = app.addRef({ prefix: 'OFR', kind: 'offer', typeLabel: o.code ? 'Coupon claim' : 'Offer claim', bizId: b.id, offerId: o.id, subject: o.title, source: 'Offer detail', details: [o.valid, o.branch], status: 'Claimed — not yet redeemed', claimWindow: o.claimWindow, ...(o.code ? { code: o.code, codeUse: o.use } : {}) })
     app.replace('ref', id)
   }
   return (
     <>
-      <div className="screen barred grey" style={{ paddingBottom: mine ? 96 : 150 }}>
+      <div className="screen barred grey" style={{ paddingBottom: mine ? (ticking ? 132 : 96) : 186 }}>
         <TopBar title={o.code ? 'Coupon' : 'Offer'} right={<SaveBtn type="offer" id={o.id} className="plain" />} />
         <div className="pad">
           <div className="card orange padded" style={{ borderRadius: 'var(--r-xl)', padding: 20 }}>
@@ -356,6 +359,7 @@ export function OfferDetail({ param }) {
             <div className="kv"><span>Where</span><span>{o.branch}</span></div>
             <div className="kv"><span>Eligibility</span><span>{o.min}</span></div>
             <div className="kv"><span>Limit</span><span>{o.limit}</span></div>
+            <div className="kv"><span>After you claim</span><span>{o.claimWindow ? `Use within ${windowText(o.claimWindow)}` : 'No time limit — use it any time before the offer ends'}</span></div>
           </div>
 
           <div className="card padded" style={{ marginTop: 12 }}>
@@ -381,13 +385,18 @@ export function OfferDetail({ param }) {
       </div>
       <div className="actionbar" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         {mine ? (
-          <button className="btn dark" onClick={() => app.go('ref', mine.id)}><Check size={18} />Claimed — view reference</button>
+          <>
+            {ticking && <div className="timerline"><Hourglass size={15} />Your claim expires in <Countdown until={mine.expiresAt} /></div>}
+            <button className="btn dark" onClick={() => app.go('ref', mine.id)}><Check size={18} />Claimed — view reference</button>
+          </>
         ) : (
           <>
+            {lapsed && <div className="timerline off"><Hourglass size={15} />Your earlier claim expired before it was used. You can claim again.</div>}
+            {!lapsed && o.claimWindow && <div className="timerline"><Hourglass size={15} />A {windowText(o.claimWindow)} timer starts when you claim</div>}
             <button type="button" className={`check ${agree ? 'on' : ''}`} role="checkbox" aria-checked={agree} onClick={() => setAgree(!agree)} style={{ minHeight: 36, padding: 0 }}>
               <span className="box">{agree && <Check size={14} strokeWidth={3} />}</span><span>I've read the terms. Share my first name with {b.name} for this claim.</span>
             </button>
-            <button className="btn primary" disabled={!agree} onClick={claim}>{o.code ? 'Claim coupon' : 'Claim offer'}</button>
+            <button className="btn primary" disabled={!agree} onClick={claim}>{lapsed ? 'Claim again' : o.code ? 'Claim coupon' : 'Claim offer'}</button>
           </>
         )}
       </div>

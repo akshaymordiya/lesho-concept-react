@@ -361,7 +361,7 @@ export const EVENTS = [
 ]
 
 export const OFFERS = [
-  { id: 'o1', bizId: 'b1', title: '₹500 off silk sarees above ₹4,000', short: '₹500 off', valid: 'Valid till 30 Nov 2026', products: ['p1', 'p4'],
+  { id: 'o1', claimWindow: 2880, bizId: 'b1', title: '₹500 off silk sarees above ₹4,000', short: '₹500 off', valid: 'Valid till 30 Nov 2026', products: ['p1', 'p4'],
     branch: 'CG Road branch only', min: 'Minimum purchase ₹4,000', limit: 'One redemption per customer',
     steps: ['Claim the offer to get a Lesho reference', 'Show the reference at the billing counter', 'The store checks the code and applies ₹500 off'],
     terms: ['Applies to silk sarees priced ₹4,000 and above', 'Cannot be combined with other store offers', 'Not valid on blouse stitching or alterations', 'A Lesho reference is required at billing'] },
@@ -369,11 +369,11 @@ export const OFFERS = [
     branch: 'Prahlad Nagar', min: 'One thali per dessert', limit: 'Up to 4 per table',
     steps: ['Claim the offer to get a Lesho reference', 'Mention it when you are seated', 'The restaurant checks the code before billing'],
     terms: ['Valid Monday to Thursday, lunch service only', 'Dessert of the day, chosen by the kitchen', 'Not valid on public holidays'] },
-  { id: 'o3', bizId: 'b8', title: '20% off your first hair spa', short: '20% off', valid: 'Valid till 31 Dec 2026', products: ['s3'],
+  { id: 'o3', claimWindow: 10080, bizId: 'b8', title: '20% off your first hair spa', short: '20% off', valid: 'Valid till 31 Dec 2026', products: ['s3'],
     branch: 'Satellite studio', min: 'First visit only', limit: 'One per customer',
     steps: ['Claim the offer to get a Lesho reference', 'Share the reference when requesting your appointment', 'The studio applies 20% off at billing'],
     terms: ['New customers only', 'Appointment needed; slot confirmed by the studio', 'Not valid on colour services'] },
-  { id: 'o4', bizId: 'b13', title: 'AC service at ₹399 this month', short: '₹399 AC service', valid: 'Valid till 30 Nov 2026', products: ['v1'],
+  { id: 'o4', claimWindow: 1440, bizId: 'b13', title: 'AC service at ₹399 this month', short: '₹399 AC service', valid: 'Valid till 30 Nov 2026', products: ['v1'],
     branch: 'West Ahmedabad service area', min: 'Split ACs up to 1.5 ton', limit: 'Up to 2 units per home',
     steps: ['Claim the offer to get a Lesho reference', 'Request a callback and mention the reference', 'The technician verifies the code on arrival'],
     terms: ['Repairs and gas refill charged separately', 'Visit subject to technician availability'] },
@@ -381,11 +381,11 @@ export const OFFERS = [
 
 // Coupon offers: a discount code the business lists. Claiming reveals the code and creates a Lesho reference; it is never a ticket.
 OFFERS.push(
-  { id: 'o5', bizId: 'b14', title: '₹100 off a ticket on weekday shows', short: '₹100 off', valid: 'Mon–Thu, till 30 Nov 2026', products: ['m1', 'm2', 'm3'],
+  { id: 'o5', claimWindow: 1440, bizId: 'b14', title: '₹100 off a ticket on weekday shows', short: '₹100 off', valid: 'Mon–Thu, till 30 Nov 2026', products: ['m1', 'm2', 'm3'],
     branch: 'Thaltej', min: 'Shows starting before 6:00 pm', limit: 'Up to 2 tickets per claim', code: 'GALAXY100', use: ['Box office', "Cinema's own booking page"],
     steps: ['Claim to reveal the coupon code and your Lesho reference', "Buy your ticket at the box office or on the cinema's booking page", 'Show or enter the code — the cinema applies ₹100 off'],
     terms: ['A coupon is a discount, not a ticket. Seats depend on availability at the cinema', 'Not valid on recliner seats or public holidays', 'One code per booking'] },
-  { id: 'o6', bizId: 'b16', title: 'Second bowling game free', short: '2nd game free', valid: 'Mon–Fri, till 15 Dec 2026', products: ['m4'],
+  { id: 'o6', claimWindow: 120, bizId: 'b16', title: 'Second bowling game free', short: '2nd game free', valid: 'Mon–Fri, till 15 Dec 2026', products: ['m4'],
     branch: 'Bodakdev', min: 'One paid game per person', limit: 'Up to 6 people per claim', code: 'STRIKE2', use: ['At the counter'],
     steps: ['Claim to reveal the coupon code and your Lesho reference', 'Show the code at the counter before your first game', 'The second game is added free'],
     terms: ['Lanes are allotted on arrival; waiting time may apply', 'Not valid on weekends or public holidays'] },
@@ -472,6 +472,8 @@ export const POSTS = [
   { id: 'pv2', type: 'review', bizId: 'b4', cat: 'food', reviewId: 'rv3', title: 'Customer review', img: '1546833999-b9f581a1996d', tags: ['d3'], likes: 112, cta: 'View restaurant' },
 ]
 
+// Claim timers in the seed data are relative to when the preview loads.
+const LOADED = Date.now()
 // Seeded reference history for the consumer profile.
 export const SEED_REFS = [
   { id: 'LSH-QUO-4T7M2', kind: 'enquiry', typeLabel: 'Quotation request', bizId: 'b9', subject: 'Aura N5 5G · 8 GB / 128 GB', created: '11 Nov, 4:10 pm',
@@ -484,6 +486,8 @@ export const SEED_REFS = [
   { id: 'LSH-RNT-9T2BX', kind: 'rental', typeLabel: 'Rental request', bizId: 'b9', subject: 'Mirrorless camera kit with two lenses', created: '30 Oct, 5:30 pm',
     status: 'Returned — rental closed', details: ['Sat, 31 Oct → Mon, 2 Nov', '2 days', 'Pickup at store'], note: 'For a family function.',
     rental: { productId: 'rt5', start: 'Sat, 31 Oct', end: 'Mon, 2 Nov', length: '2 days', fulfil: 'Pickup at store', est: 2800, deposit: 10000, depositStatus: 'Refunded in full (merchant-reported)' } },
+  { id: 'LSH-OFR-5M2QA', kind: 'offer', typeLabel: 'Offer claim', bizId: 'b8', offerId: 'o3', subject: '20% off your first hair spa', created: 'Today, 10:15 am',
+    status: 'Claimed — not yet redeemed', details: ['Valid till 31 Dec 2026', 'Satellite studio'], note: '', claimedAt: LOADED - 3 * 3600e3, expiresAt: LOADED + (7 * 24 - 3) * 3600e3 },
   { id: 'LSH-APT-6H2RD', kind: 'enquiry', typeLabel: 'Appointment request', bizId: 'b8', subject: 'Balayage hair colour', created: '12 Nov, 6:20 pm',
     status: 'Appointment confirmed', details: ['Shoulder length', 'Saturday'], note: 'Shoulder-length hair, first visit.' },
   { id: 'LSH-CON-5J9TQ', kind: 'enquiry', typeLabel: 'Showroom consultation request', bizId: 'b10', subject: 'Sienna 3-seater leather sofa', created: '10 Nov, 1:15 pm',
@@ -510,6 +514,8 @@ export const SEED_LEADS = [
     created: '11 Nov, 7:20 pm', status: 'Contacted', details: ['Blouse / size details'], note: 'Can the blouse be altered to size 36?', billable: 'yes' },
   { id: 'LSH-ENQ-2F5N9', kind: 'enquiry', typeLabel: 'Availability enquiry', consumer: 'Jinal S.', subject: 'Ivory embroidered lehenga set', source: 'Product page',
     created: '11 Nov, 7:24 pm', status: 'Invalid / duplicate', details: ['Same consumer and product within 24 hours'], note: 'Flagged automatically as a duplicate. Not billed.', billable: 'no' },
+  { id: 'LSH-OFR-2H6VT', kind: 'intent', typeLabel: 'Offer claim', consumer: 'Kinjal B.', subject: '₹500 off silk sarees above ₹4,000', source: 'Offer detail',
+    created: 'Today, 9:40 am', status: 'New', details: ['Valid till 30 Nov 2026', 'CG Road branch only'], note: '', billable: 'pending', claimedAt: LOADED - 7 * 3600e3, expiresAt: LOADED + 41 * 3600e3 },
   { id: 'LSH-RNT-4K8QD', kind: 'intent', typeLabel: 'Rental request', consumer: 'Riddhi V.', subject: 'Ivory embroidered lehenga set', source: 'Rental listing',
     created: 'Today, 11:20 am', status: 'New', details: ['Thu, 19 Nov → Sun, 22 Nov', '3 days', 'Pickup at store', 'M'], note: 'For my sister\'s engagement on the 20th. Can I come for a fitting on Wednesday?', billable: 'pending',
     rental: { productId: 'p6', start: 'Thu, 19 Nov', end: 'Sun, 22 Nov', length: '3 days', fulfil: 'Pickup at store', est: 2250, deposit: 4000 } },
@@ -663,3 +669,6 @@ export const AUTO_REPLY = {
   next: 'Got it — we\'ll get back to you on this today.',
   consumer: 'Thank you, that helps! I\'ll come by with my Lesho reference.',
 }
+
+// Claim-expiry choices a merchant can set on an offer or coupon (minutes). The 1-minute option exists so the preview can show auto-expiry.
+export const CLAIM_WINDOWS = [[null, 'Never'], [1, '1 minute · demo'], [120, '2 hours'], [1440, '24 hours'], [2880, '48 hours'], [10080, '7 days']]
