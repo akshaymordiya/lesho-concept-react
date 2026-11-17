@@ -22,6 +22,7 @@ Screens are also addressable by hash, e.g. `#/c/product/p1`, `#/c/viewer/dp1`, `
 - `src/ui.jsx` — shared components (cards, sheets, image with fallback, mock reference code)
 - `src/App.jsx` — state, stack navigation, device frame
 - Rentals: any catalogue item can be listed to sell, rent out, or both (`rent` on a product in `src/data.js`; screens in `src/screens/Rental.jsx`). Customers send a dated rental request; the shop accepts, hands over against the reference and marks the return. No payment or deposit is handled in the app.
+- Entertainment: cinemas, theatres and arcades list showtimes, activities, events and coupon codes. Claiming a coupon reveals the code and creates a reference; tickets and seats are never sold or held in the app.
 - `src/screens/` — Home, Guide (mock AI), Explore, Detail (product, business, event, offer),
   Viewer (vertical reels feed, stories, photo-dump carousel, review), Flows (enquiry, visit intent, confirmation, review), Me, Merchant
 

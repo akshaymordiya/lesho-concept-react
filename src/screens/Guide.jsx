@@ -9,6 +9,7 @@ const INTENTS = [
   { cat: 'services', type: 'product', kw: ['ac', 'repair', 'cleaning', 'cleaner', 'drill', 'tool', 'tutor', 'electrician', 'plumber'], noun: 'a home service' },
   { cat: 'fashion', type: 'product', kw: ['saree', 'sari', 'lehenga', 'kurta', 'wedding', 'dress', 'suit', 'tuxedo', 'outfit'], noun: 'occasion wear' },
   { cat: 'electronics', type: 'product', kw: ['phone', 'mobile', 'headphone', 'earbuds', 'camera', 'lens'], noun: 'a phone' },
+  { cat: 'entertainment', type: 'product', kw: ['movie', 'film', 'cinema', 'theatre', 'theater', 'multiplex', 'bowling', 'arcade', 'comedy', 'coupon'], noun: 'things to watch and do' },
   { cat: 'events', type: 'event', kw: ['event', 'concert', 'workshop', 'music', 'festival', 'sound system', 'speaker', 'weekend'], noun: 'events' },
   { cat: 'beauty', type: 'product', kw: ['salon', 'hair', 'facial', 'spa', 'makeup'], noun: 'a salon service' },
   { cat: 'home', type: 'product', kw: ['sofa', 'furniture', 'chair', 'bed', 'interior'], noun: 'furniture' },
@@ -17,7 +18,7 @@ const INTENTS = [
   { cat: 'food', type: 'product', kw: ['food', 'dosa', 'thali', 'dinner', 'lunch', 'breakfast', 'restaurant', 'cafe', 'café', 'coffee', 'eat', 'hungry', 'buffet', 'catering'], noun: 'food' },
   { cat: null, type: 'biz', kw: ['store', 'shop', 'local'], noun: 'local stores' },
 ]
-const SUBS = ['camera', 'drill', 'bicycle', 'treadmill', 'tuxedo', 'speaker', 'buffet', 'motorcycle', 'bed', 'saree', 'lehenga', 'suit', 'phone', 'headphones', 'dosa', 'thali', 'coffee', 'sofa', 'chair', 'hair', 'facial', 'gym', 'cleaning', 'ac']
+const SUBS = ['movie', 'bowling', 'arcade', 'camera', 'drill', 'bicycle', 'treadmill', 'tuxedo', 'speaker', 'buffet', 'motorcycle', 'bed', 'saree', 'lehenga', 'suit', 'phone', 'headphones', 'dosa', 'thali', 'coffee', 'sofa', 'chair', 'hair', 'facial', 'gym', 'cleaning', 'ac']
 const STYLES = { fashion: ['silk', 'georgette'], electronics: ['5g'], food: ['south indian', 'gujarati'] }
 
 function parseBudget(t) {
@@ -54,12 +55,17 @@ function resultsFor(intent, f, app) {
     .sort((a, b) => (f.budget ? (eff(a) > f.budget) - (eff(b) > f.budget) : 0) || b.rating - a.rating)
     .slice(0, 6)
     .map((p) => ({ type: 'product', item: p, rent: !!intent.rent, over: f.budget && eff(p) > f.budget ? eff(p) - f.budget : 0 }))
+    // Plays and comedy nights are events; show them alongside films and activities.
+    .concat(intent.cat === 'entertainment' && !intent.rent && !intent.sub ? app.events.filter((e) => e.cat === 'entertainment').map((e) => ({ type: 'event', item: e })) : [])
 }
 
 function whyFor(p, over, f, app, rent) {
   const b = app.biz(p.bizId), out = []
   if (rent) out.push(`${rentRate(p)}, minimum ${p.rent.min} ${p.rent.unit}${p.rent.min > 1 ? 's' : ''} · ${p.rent.deposit ? `${inr(p.rent.deposit)} refundable deposit` : 'no deposit'}`)
   if (f.budget) out.push(over ? `${inr(over)} over your budget — shown as a close alternative` : `Within your ${inr(f.budget)} budget`)
+  const coupon = app.offerFor(p.id)
+  if (coupon?.code) out.push(`Coupon available: ${coupon.title.toLowerCase()}`)
+  if (p.show) out.push(`Today: ${p.show.times.join(', ')} (merchant-provided)`)
   if (f.occasion && p.tags.includes(f.occasion)) out.push(`Tagged for ${f.occasion}s by the store`)
   if (f.style && p.tags.includes(f.style)) out.push(`Matches “${f.style}”`)
   const d = app.distOf(b)
@@ -126,7 +132,7 @@ export default function Guide() {
       <>
         {intent.refined ? 'Updated. ' : ''}Here's what I understood: {bits.map((b, i) => <React.Fragment key={i}>{b}</React.Fragment>)}.{' '}
         {results.length
-          ? <>I found <b>{results.length} option{results.length > 1 ? 's' : ''}</b> across {stores} store{stores > 1 ? 's' : ''}.{over ? ` ${over} ${over > 1 ? 'are' : 'is'} slightly over budget and marked.` : ''} {intent.rent ? 'Dates are confirmed by each shop when you send a rental request.' : "I haven't confirmed stock with any store."}</>
+          ? <>I found <b>{results.length} option{results.length > 1 ? 's' : ''}</b> across {stores} {intent.cat === 'entertainment' ? 'venue' : 'store'}{stores > 1 ? 's' : ''}.{over ? ` ${over} ${over > 1 ? 'are' : 'is'} slightly over budget and marked.` : ''} {intent.rent ? 'Dates are confirmed by each shop when you send a rental request.' : intent.cat === 'entertainment' ? "Tickets and seats are handled by each venue — I can show you showtimes and coupons." : "I haven't confirmed stock with any store."}</>
           : <>Nothing in the mock catalogue matches all of that. Try loosening a filter below.</>}
       </>
     )

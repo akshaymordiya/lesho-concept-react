@@ -1,11 +1,36 @@
 import React, { useState } from 'react'
 import {
   Share2, Phone, Navigation, MessageCircle, MapPin, Clock, ChevronRight, Info, Tag, ShieldCheck, ShieldQuestion, CalendarDays, Ticket, Play,
-  ExternalLink, PenLine, KeyRound, UserPlus, UserCheck, CalendarCheck, Check, Store, Users, MessageSquareText,
+  ExternalLink, PenLine, KeyRound, Clapperboard, Copy, UserPlus, UserCheck, CalendarCheck, Check, Store, Users, MessageSquareText,
 } from 'lucide-react'
 import { useApp, Img, TopBar, SaveBtn, Verified, Rating, Stars, Note, Chip, ProductCard, ProductRow, ReviewCard, OfferCard, EventCard, PostTile, Empty, priceOf, CatIcon } from '../ui.jsx'
 import { cat as catOf } from '../data.js'
 import { RentalBlock, rentLabel } from './Rental.jsx'
+
+/* Showtimes for a film or show. Informational only — Lesho does not sell tickets or hold seats. */
+function ShowBlock({ p, onAsk }) {
+  const s = p.show
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="row" style={{ padding: '14px 16px 0' }}>
+        <span className="kind" style={{ background: 'var(--ink)', color: '#fff' }}><Clapperboard size={17} /></span>
+        <div className="grow"><div className="h3">Today's showtimes</div><div className="tiny muted">Merchant-provided · updated {s.updated}</div></div>
+      </div>
+      <div className="wrap" style={{ padding: '12px 16px 4px', gap: 6 }} aria-label="Showtimes today">
+        {s.times.map((t) => <span key={t} className="showtime">{t}</span>)}
+      </div>
+      <div style={{ padding: '0 16px 4px' }}>
+        <div className="kv"><span>Format</span><span>{s.formats}</span></div>
+        <div className="kv"><span>Where</span><span>{s.screen}</span></div>
+        <div className="kv"><span>Ticket prices</span><span>{s.prices} · set by the cinema</span></div>
+      </div>
+      <div style={{ padding: '4px 16px 14px' }}>
+        <Note icon={Info}>Lesho doesn't sell tickets or hold seats. Buy at the box office or on the cinema's own booking page. A Lesho coupon only applies a discount.</Note>
+        <button className="btn soft sm" style={{ marginTop: 10 }} onClick={onAsk}><Users size={15} />Ask about a group booking</button>
+      </div>
+    </div>
+  )
+}
 
 function Gallery({ imgs, alt, height = 400, children }) {
   const [i, setI] = useState(0)
@@ -43,7 +68,7 @@ export function ProductDetail({ param }) {
   const revs = app.reviews.filter((r) => r.target.type === 'product' && r.target.id === p.id)
   const similar = app.products.filter((x) => x.id !== p.id && x.cat === p.cat && x.bizId !== p.bizId && x.tags.some((t) => p.tags.includes(t))).slice(0, 6)
   const more = app.products.filter((x) => x.id !== p.id && x.bizId === p.bizId).slice(0, 6)
-  const isFood = p.cat === 'food' && !p.rent, canBuy = p.sale !== false
+  const isFood = p.cat === 'food' && !p.rent, canBuy = p.sale !== false, isEnt = p.cat === 'entertainment' && !p.rent
   const lead = () => app.openLead({ catId: p.cat, bizId: b.id, subject: p.name, source: 'Product page', variant })
 
   return (
@@ -79,6 +104,7 @@ export function ProductDetail({ param }) {
             </Note>
           </div>
           {p.rent && <RentalBlock p={p} />}
+          {p.show && <ShowBlock p={p} onAsk={() => app.openLead({ catId: p.cat, bizId: b.id, subject: p.name, source: 'Show page', variant: 'Group booking' })} />}
 
           {offer && (
             <button className="card orange padded tap row" style={{ marginTop: 12 }} onClick={() => app.go('offer', offer.id)}>
@@ -91,7 +117,7 @@ export function ProductDetail({ param }) {
           <p style={{ marginTop: 18 }}>{p.desc}</p>
           <div style={{ marginTop: 12 }}>{Object.entries(p.attrs).map(([k, v]) => <div key={k} className="kv"><span>{k}</span><span>{v}</span></div>)}</div>
 
-          <div className="eyebrow" style={{ margin: '22px 0 8px' }}>{isFood ? 'Served at' : p.kind === 'Service' ? 'Offered by' : p.kind === 'Rental' ? 'Rented out by' : 'Sold by'}</div>
+          <div className="eyebrow" style={{ margin: '22px 0 8px' }}>{isFood ? 'Served at' : p.kind === 'Service' ? 'Offered by' : p.kind === 'Rental' ? 'Rented out by' : p.kind === 'Movie' ? 'Showing at' : isEnt ? 'At' : 'Sold by'}</div>
           <BizRow b={b} />
 
           <div className="between" style={{ marginTop: 26 }}>
@@ -114,9 +140,12 @@ export function ProductDetail({ param }) {
       </div>
       <div className="actionbar">
         <button className="icon-btn" aria-label={`Call ${b.name}`} onClick={() => app.contact('call', b, p.name)}><Phone size={19} /></button>
-        {!(p.rent && canBuy) && <button className="icon-btn" aria-label="Get directions" onClick={() => app.contact('directions', b, p.name)}><Navigation size={19} /></button>}
+        {!(p.rent && canBuy) && !p.show && <button className="icon-btn" aria-label="Get directions" onClick={() => app.contact('directions', b, p.name)}><Navigation size={19} /></button>}
         {p.rent
           ? <>{canBuy && <button className="btn ghost" style={{ flex: '0 1 auto' }} onClick={lead}>Ask to buy</button>}<button className="btn primary" onClick={() => app.go('rent', p.id)}><KeyRound size={18} />Request to rent</button></>
+          : isEnt
+          ? <>{p.show && <button className="btn ghost" style={{ flex: '0 1 auto', padding: '0 14px' }} onClick={() => app.contact('external', b, p.name)}><ExternalLink size={16} />Booking page</button>}
+            {offer ? <button className="btn primary" onClick={() => app.go('offer', offer.id)}><Ticket size={18} />Get coupon</button> : <button className="btn primary" onClick={lead}>{c.lead.cta}</button>}</>
           : isFood
           ? <><button className="icon-btn" aria-label="Ask a question" onClick={lead}><MessageSquareText size={19} /></button><button className="btn primary" onClick={() => app.go('visit', b.id)}><CalendarCheck size={18} />Plan a visit</button></>
           : <button className="btn primary" onClick={lead}>{c.lead.cta}</button>}
@@ -136,7 +165,7 @@ export function BusinessProfile({ param }) {
   const revs = app.reviews.filter((r) => r.bizId === b.id)
   const isFood = b.cat === 'food', isOrg = b.cat === 'events'
   const tabs = [
-    ...(items.length ? [['cat', isFood ? 'Menu' : b.cat === 'fashion' || b.cat === 'electronics' || b.cat === 'home' ? 'Catalogue' : 'Services']] : []),
+    ...(items.length ? [['cat', isFood ? 'Menu' : b.cat === 'entertainment' ? "What's on" : b.cat === 'fashion' || b.cat === 'electronics' || b.cat === 'home' ? 'Catalogue' : 'Services']] : []),
     ...(rentals.length ? [['rent', `Rentals ${rentals.length}`]] : []),
     ...(events.length ? [['events', 'Events']] : []),
     ['posts', `Posts${posts.length ? ` ${posts.length}` : ''}`], ['offers', 'Offers'], ['reviews', 'Reviews'], ['about', 'About'],
@@ -296,21 +325,31 @@ export function OfferDetail({ param }) {
   const mine = app.refs.find((r) => r.offerId === o.id)
   const [agree, setAgree] = useState(false)
   const claim = () => {
-    const id = app.addRef({ prefix: 'OFR', kind: 'offer', typeLabel: 'Offer claim', bizId: b.id, offerId: o.id, subject: o.title, source: 'Offer detail', details: [o.valid, o.branch], status: 'Claimed — not yet redeemed' })
+    const id = app.addRef({ prefix: 'OFR', kind: 'offer', typeLabel: o.code ? 'Coupon claim' : 'Offer claim', bizId: b.id, offerId: o.id, subject: o.title, source: 'Offer detail', details: [o.valid, o.branch], status: 'Claimed — not yet redeemed', ...(o.code ? { code: o.code, codeUse: o.use } : {}) })
     app.replace('ref', id)
   }
   return (
     <>
       <div className="screen barred grey" style={{ paddingBottom: mine ? 96 : 150 }}>
-        <TopBar title="Offer" right={<SaveBtn type="offer" id={o.id} className="plain" />} />
+        <TopBar title={o.code ? 'Coupon' : 'Offer'} right={<SaveBtn type="offer" id={o.id} className="plain" />} />
         <div className="pad">
           <div className="card orange padded" style={{ borderRadius: 'var(--r-xl)', padding: 20 }}>
-            <div className="between"><span className="eyebrow" style={{ color: 'var(--orange-ink)' }}>{catOf(b.cat).label} offer</span><span className="kind" style={{ background: 'var(--orange)' }}><Tag size={17} /></span></div>
+            <div className="between"><span className="eyebrow" style={{ color: 'var(--orange-ink)' }}>{catOf(b.cat).label} {o.code ? 'coupon' : 'offer'}</span><span className="kind" style={{ background: 'var(--orange)' }}><Tag size={17} /></span></div>
             <h1 className="h1" style={{ fontSize: 21, marginTop: 10 }}>{o.title}</h1>
             <button className="row" style={{ marginTop: 14, gap: 8, minHeight: 44 }} onClick={() => app.go('biz', b.id)}>
               <span className="avatar sm">{b.name[0]}</span><span className="b small">{b.name}</span><Verified biz={b} /><ChevronRight size={16} />
             </button>
           </div>
+
+          {o.code && (
+            <div className="card padded" style={{ marginTop: 12 }}>
+              <div className="between">
+                <div><div className="eyebrow">Coupon code</div><div className="refcode" style={{ marginTop: 4 }}>{mine ? o.code : '• • • • • • • •'}</div></div>
+                {mine ? <button className="btn soft sm" onClick={() => app.toast('Coupon code copied (simulated)')}><Copy size={14} />Copy</button> : <span className="badge grey">Claim to reveal</span>}
+              </div>
+              <div className="tiny muted" style={{ marginTop: 8 }}>Use at: {o.use.join(' · ')}. A coupon is a discount, not a ticket or a seat.</div>
+            </div>
+          )}
 
           <div className="card" style={{ marginTop: 12, padding: '4px 16px' }}>
             <div className="kv"><span>Validity</span><span>{o.valid}</span></div>
@@ -348,7 +387,7 @@ export function OfferDetail({ param }) {
             <button type="button" className={`check ${agree ? 'on' : ''}`} role="checkbox" aria-checked={agree} onClick={() => setAgree(!agree)} style={{ minHeight: 36, padding: 0 }}>
               <span className="box">{agree && <Check size={14} strokeWidth={3} />}</span><span>I've read the terms. Share my first name with {b.name} for this claim.</span>
             </button>
-            <button className="btn primary" disabled={!agree} onClick={claim}>Claim offer</button>
+            <button className="btn primary" disabled={!agree} onClick={claim}>{o.code ? 'Claim coupon' : 'Claim offer'}</button>
           </>
         )}
       </div>

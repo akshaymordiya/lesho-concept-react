@@ -176,8 +176,8 @@ export function RefConfirm({ param }) {
       </div>
       <div className="pad" style={{ paddingBottom: 28 }}>
         <div className="okmark"><I size={30} /></div>
-        <h1 className="h1" style={{ textAlign: 'center', marginTop: 16, fontSize: 22 }}>{r.typeLabel === 'Appointment request' ? 'Appointment request sent' : r.typeLabel === 'Quotation request' ? 'Quotation request sent' : copy.title}</h1>
-        <p className="small" style={{ textAlign: 'center', opacity: .75, marginTop: 8, padding: '0 6px' }}>{copy.sub(b.name)}</p>
+        <h1 className="h1" style={{ textAlign: 'center', marginTop: 16, fontSize: 22 }}>{r.typeLabel === 'Appointment request' ? 'Appointment request sent' : r.typeLabel === 'Quotation request' ? 'Quotation request sent' : r.code ? 'Coupon claimed' : copy.title}</h1>
+        <p className="small" style={{ textAlign: 'center', opacity: .75, marginTop: 8, padding: '0 6px' }}>{r.code ? `Use the code with ${b.name}. It applies a discount — it is not a ticket, and seats or slots are arranged with the venue.` : copy.sub(b.name)}</p>
 
         <div className="ticket" style={{ marginTop: 22 }}>
           <div className="between">
@@ -186,6 +186,12 @@ export function RefConfirm({ param }) {
           <span className="badge blue" style={{ marginTop: 10 }}>{lead && lead.status !== 'New' ? lead.status : r.status}</span>
           {r.details?.length > 0 && <div className="wrap" style={{ marginTop: 12, gap: 6 }}>{r.details.map((d) => <span key={d} className="badge grey" style={{ fontSize: 12, padding: '5px 10px' }}>{d}</span>)}</div>}
           {r.note && <p className="small muted" style={{ marginTop: 10 }}>“{r.note}”</p>}
+          {r.code && (
+            <div className="couponbox">
+              <div><div className="eyebrow">Coupon code</div><div className="refcode" style={{ fontSize: 22 }}>{r.code}</div><div className="tiny muted">Use at: {(r.codeUse || []).join(' · ')}</div></div>
+              <button className="btn soft sm" onClick={() => app.toast('Coupon code copied (simulated)')}><Copy size={14} />Copy</button>
+            </div>
+          )}
           {r.rental && <div style={{ marginTop: 8 }}><RentalSummary rental={r.rental} deposit={lead?.deposit} /></div>}
           {r.rental && /Declined/.test(status) && <div style={{ marginTop: 8 }}><Note tone="amber" icon={Info}>The shop isn't available on these dates. You can send a new request with other dates or message the shop.</Note></div>}
           <div className="tiny muted" style={{ marginTop: 10 }}>Created {r.created}</div>

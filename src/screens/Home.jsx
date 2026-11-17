@@ -3,7 +3,7 @@ import { MapPin, ChevronDown, Search, Sparkles, ArrowUp, MessageSquareText, Imag
 import { useApp, Img, SectionHead, ProductCard, BizCard, EventCard, OfferCard, PostTile, ReviewCard, CatIcon, Verified, Empty, Note } from '../ui.jsx'
 import { CATS, USER } from '../data.js'
 
-export const PROMPTS = ['Wedding saree around ₹5,000', 'Good food near me', 'Rent a camera for the weekend', 'Compare phones under ₹25,000', 'Events this weekend', 'Find a salon', 'Explore local stores']
+export const PROMPTS = ['Wedding saree around ₹5,000', 'Good food near me', 'Rent a camera for the weekend', 'Compare phones under ₹25,000', 'Movie offers tonight', 'Events this weekend', 'Find a salon', 'Explore local stores']
 
 export default function Home() {
   const app = useApp()
@@ -11,7 +11,7 @@ export default function Home() {
   const { area } = app
   const near = [...app.businesses].sort((a, b) => (app.distOf(a) ?? 0) - (app.distOf(b) ?? 0))
   const byId = (ids) => ids.map(app.prod).filter(Boolean)
-  const picked = byId(app.prefs.personal ? ['p1', 'd3', 's1', 'e1', 'h1', 'f1'] : ['d1', 'p3', 'v1', 'e2', 'a1', 'h3'])
+  const picked = byId(app.prefs.personal ? ['p1', 'd3', 'm1', 's1', 'e1', 'h1', 'f1'] : ['d1', 'p3', 'v1', 'e2', 'a1', 'h3'])
   const popular = byId(['d1', 'p5', 'v1', 'h2', 's3', 'e3'])
   const reels = app.posts.filter((p) => p.type === 'reel')
   const dump = app.posts.find((p) => p.type === 'dump')
@@ -159,6 +159,11 @@ export default function Home() {
           <section className="section">
             <SectionHead title="Events this week" action="All events" onAction={() => { app.setExploreSeed({ type: 'event', t: Date.now() }); app.tab('explore') }} />
             <div className="hscroll">{app.events.map((e) => <EventCard key={e.id} e={e} />)}</div>
+          </section>
+
+          <section className="section">
+            <SectionHead title="Now showing" sub="Films, games and coupons · tickets sold by the venue" action="See all" onAction={() => { app.setExploreSeed({ cat: 'entertainment', t: Date.now() }); app.tab('explore') }} />
+            <div className="hscroll">{app.products.filter((p) => p.cat === 'entertainment' && p.sale !== false).map((p) => <ProductCard key={p.id} p={p} />)}</div>
           </section>
 
           {featuredReview && (

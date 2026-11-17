@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react'
 import {
-  Shirt, UtensilsCrossed, PartyPopper, Scissors, Smartphone, Sofa, Car, Dumbbell, Wrench,
+  Shirt, UtensilsCrossed, PartyPopper, Scissors, Smartphone, Sofa, Car, Dumbbell, Wrench, Clapperboard,
   Star, Bookmark, BadgeCheck, ArrowLeft, X, Check, MapPin, Play, Images, Tag, ChevronRight, Store, ImageOff, Megaphone, MessageSquareQuote, KeyRound,
 } from 'lucide-react'
 import { cat as catOf } from './data.js'
@@ -12,7 +12,7 @@ export const inr = (n) => '₹' + Number(n).toLocaleString('en-IN')
 export const rentRate = (p) => `${inr(p.rent.rate)}/${p.rent.unit}`
 export const priceOf = (p) => p.rent && p.sale === false ? rentRate(p) : (p.priceNote === 'from' ? 'From ' : '') + inr(p.price) + (p.priceNote && p.priceNote !== 'from' ? ' ' + p.priceNote : '')
 
-const CAT_ICONS = { Shirt, UtensilsCrossed, PartyPopper, Scissors, Smartphone, Sofa, Car, Dumbbell, Wrench }
+const CAT_ICONS = { Shirt, UtensilsCrossed, PartyPopper, Scissors, Smartphone, Sofa, Car, Dumbbell, Wrench, Clapperboard }
 export function CatIcon({ id, size = 20 }) {
   const I = CAT_ICONS[catOf(id)?.icon] || Store
   return <I size={size} strokeWidth={1.8} />

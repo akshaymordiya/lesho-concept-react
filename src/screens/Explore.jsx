@@ -34,7 +34,7 @@ export default function Explore() {
   }, [app.exploreSeed])
   useEffect(() => { setPin(null) }, [type, catId, app.area.id])
 
-  const pickCat = (id) => { setCatId(id); if (id === 'events' && !rentOnly) setType('event'); else if (type === 'event') setType('product') }
+  const pickCat = (id) => { setCatId(id); if (id === 'events' && !rentOnly) setType('event'); else if (type === 'event' && id !== 'all' && id !== 'entertainment') setType('product') }
   const ql = q.trim().toLowerCase()
   const match = (...fields) => !ql || ql.split(/\s+/).every((w) => fields.some((f) => f && f.toLowerCase().includes(w)))
   const d = (b) => app.distOf(b) ?? 0
@@ -54,7 +54,7 @@ export default function Explore() {
         .filter((b) => (!flt.rate4 || b.rating >= 4.5) && (!flt.verified || b.verified) && (!flt.offer || app.offers.some((o) => o.bizId === b.id)) && inRadius(b))
       items = [...items].sort((a, b) => (sort === 'rate' ? b.rating - a.rating : d(a) - d(b)))
     } else {
-      items = app.events.filter((e) => match(e.name, e.type, e.venue)).filter((e) => (!flt.cap || e.price <= flt.cap) && inRadius(e))
+      items = app.events.filter((e) => inCat(e.cat || 'events') && match(e.name, e.type, e.venue)).filter((e) => (!flt.cap || e.price <= flt.cap) && inRadius(e))
       if (sort === 'low') items = [...items].sort((a, b) => a.price - b.price)
       if (sort === 'dist') items = [...items].sort((a, b) => d(a) - d(b))
     }
@@ -99,7 +99,7 @@ export default function Explore() {
         <div className="pad" style={{ marginTop: 12 }}>
           <div className="seg" role="tablist">
             {[['product', 'Products & services'], ['biz', 'Businesses'], ['event', 'Events']].map(([id, l]) => (
-              <button key={id} role="tab" aria-selected={type === id} className={type === id ? 'on' : ''} onClick={() => { setType(id); if (id === 'event') { setCatId('events'); setRentOnly(false) } else { if (id === 'biz') setRentOnly(false); if (type === 'event' && catId === 'events') setCatId('all') } }}>{l}</button>
+              <button key={id} role="tab" aria-selected={type === id} className={type === id ? 'on' : ''} onClick={() => { setType(id); if (id === 'event') { if (!['all', 'events', 'entertainment'].includes(catId)) setCatId('all'); setRentOnly(false) } else { if (id === 'biz') setRentOnly(false); if (type === 'event' && catId === 'events') setCatId('all') } }}>{l}</button>
             ))}
           </div>
           <div className="between" style={{ marginTop: 12 }}>

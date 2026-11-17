@@ -27,6 +27,11 @@ export const CATS = [
     lead: { cta: 'Request tickets', type: 'Ticket request', prefix: 'EVT',
       optLabel: 'Anything to mention?', opts: ['Group booking', 'Student pass', 'Accessibility needs'],
       ph: 'Optional note for the organiser' } },
+  { id: 'entertainment', label: 'Entertainment', icon: 'Clapperboard',
+    lead: { cta: 'Ask the venue', type: 'Venue enquiry', prefix: 'ENT',
+      optLabel: 'Your question is about', opts: ['Showtimes', 'Group booking (10+)', 'Seat types and prices', 'Accessibility', 'Parking'],
+      ph: 'e.g. Are recliner seats available for the 9:30 pm show?',
+      note: 'Lesho does not sell tickets or hold seats. The venue replies with details and how to book with them.' } },
   { id: 'beauty', label: 'Beauty', icon: 'Scissors',
     lead: { cta: 'Request appointment', type: 'Appointment request', prefix: 'APT',
       optLabel: 'Preferred time', opts: ['Weekday morning', 'Weekday evening', 'Saturday', 'Sunday'],
@@ -108,6 +113,18 @@ export const BUSINESSES = [
     verified: true, rating: 4.2, reviews: 402, hours: '8:00 am – 8:00 pm', open: true, since: 2019,
     cover: '1581578731548-c64695cc6952', tagline: 'AC repair, electrical work and deep cleaning',
     about: 'Background-checked technicians. Visit charge is adjusted against the final bill when you proceed.' },
+  { id: 'b14', name: 'Galaxy Cinemas', cat: 'entertainment', area: 'tha', addr: 'Drive-In Road, Thaltej', x: -5.2, y: 1.2,
+    verified: true, rating: 4.3, reviews: 612, hours: '9:30 am – 12:30 am', open: true, since: 2012,
+    cover: '1489599849927-2ee91cede3ba', tagline: 'Four screens, recliners and weekday coupons',
+    about: 'A four-screen cinema showing Hindi, Gujarati and English films. Tickets are sold at the box office and on the cinema\'s own booking page; Lesho lists showtimes and discount coupons only.' },
+  { id: 'b15', name: 'Rangmanch Theatre', cat: 'entertainment', area: 'nav', addr: 'Ellisbridge, near Navrangpura', x: 0.9, y: -0.9,
+    verified: true, rating: 4.6, reviews: 148, hours: 'Box office 11:00 am – 8:00 pm', open: true, since: 1987,
+    cover: '1507924538820-ede94a04019d', tagline: 'Gujarati plays, stand-up and recitals',
+    about: 'A 320-seat auditorium for theatre, comedy and music. Seats are issued by the box office.' },
+  { id: 'b16', name: 'PlayYard Arcade & Bowling', cat: 'entertainment', area: 'bod', addr: 'Sindhu Bhavan Road, Bodakdev', x: -5.1, y: 0.2,
+    verified: true, rating: 4.2, reviews: 233, hours: '11:00 am – 11:00 pm', open: true, since: 2019,
+    cover: '1511882150382-421056c89033', tagline: 'Six bowling lanes and forty arcade machines',
+    about: 'Walk-in bowling, arcade games and party packages. Lanes are allotted at the counter.' },
 ]
 
 const FRESH = { d2: 'Merchant-provided · updated 2 days ago', d5: 'Merchant-provided · updated 5 days ago', w2: 'Merchant-provided · updated 2 weeks ago' }
@@ -117,6 +134,8 @@ const AV = {
   none: { label: 'Availability not maintained by this store', tone: 'muted' },
   svc: { label: 'Slots are confirmed by the provider', tone: 'muted' },
   rent: { label: 'Rental dates are confirmed by the shop', tone: 'muted' },
+  show: { label: 'Showtimes are merchant-provided for today', tone: 'muted' },
+  walk: { label: 'Walk-in — lanes and machines are allotted at the counter', tone: 'muted' },
 }
 
 export const PRODUCTS = [
@@ -232,6 +251,30 @@ export const PRODUCTS = [
   { id: 's3', bizId: 'b8', cat: 'beauty', kind: 'Service', name: 'Haircut & blow-dry', price: 900, fresh: FRESH.d5,
     img: '1562322140-8baeececf3df', imgs: ['1562322140-8baeececf3df'], variants: ['Stylist', 'Senior stylist'], avail: AV.svc, rating: 4.5, reviews: 67, tags: ['hair', 'haircut', 'salon'],
     attrs: { Duration: '45 minutes' }, desc: 'Consultation, wash, cut and a finishing blow-dry.' },
+  // Entertainment: shows and activities. Film titles are fictional. Lesho lists showtimes and coupons; it does not sell tickets.
+  { id: 'm1', bizId: 'b14', cat: 'entertainment', kind: 'Movie', name: 'Monsoon Signal', price: 180, priceNote: 'from', fresh: 'Merchant-provided · updated today, 9:00 am',
+    img: '1585951237318-9ea5e175b891', imgs: ['1585951237318-9ea5e175b891', '1489599849927-2ee91cede3ba'], avail: AV.show, rating: 4.2, reviews: 88, tags: ['movie', 'film', 'thriller', 'hindi', 'cinema'],
+    attrs: { Language: 'Hindi', Genre: 'Thriller', Runtime: '2 h 12 min', Certificate: 'U/A 13+' }, desc: 'A night-shift radio operator picks up a distress call from a ship that sank ten years ago.',
+    show: { times: ['10:30 am', '1:45 pm', '6:15 pm', '9:30 pm'], formats: '2D', screen: 'Screens 1 and 3', prices: '₹180 – ₹320', updated: 'today, 9:00 am' } },
+  { id: 'm2', bizId: 'b14', cat: 'entertainment', kind: 'Movie', name: 'Orbit Nine', price: 240, priceNote: 'from', fresh: 'Merchant-provided · updated today, 9:00 am',
+    img: '1446776811953-b23d57bd21aa', imgs: ['1446776811953-b23d57bd21aa'], avail: AV.show, rating: 4.4, reviews: 61, tags: ['movie', 'film', 'sci-fi', 'english', '3d', 'cinema'],
+    attrs: { Language: 'English', Genre: 'Science fiction', Runtime: '1 h 58 min', Certificate: 'U/A 7+' }, desc: 'Nine engineers on a failing station have one orbit to decide who goes home.',
+    show: { times: ['12:15 pm', '3:30 pm', '10:00 pm'], formats: '3D and 2D', screen: 'Screen 2', prices: '₹240 – ₹380', updated: 'today, 9:00 am' } },
+  { id: 'm3', bizId: 'b14', cat: 'entertainment', kind: 'Movie', name: 'Sanjh', price: 150, priceNote: 'from', fresh: 'Merchant-provided · updated today, 9:00 am',
+    img: '1419242902214-272b3f66ee7a', imgs: ['1419242902214-272b3f66ee7a'], avail: AV.show, rating: 4.5, reviews: 47, tags: ['movie', 'film', 'drama', 'gujarati', 'family', 'cinema'],
+    attrs: { Language: 'Gujarati', Genre: 'Family drama', Runtime: '2 h 05 min', Certificate: 'U' }, desc: 'Three generations return to a village house for one last Uttarayan together.',
+    show: { times: ['11:00 am', '4:45 pm', '8:00 pm'], formats: '2D', screen: 'Screen 4', prices: '₹150 – ₹260', updated: 'today, 9:00 am' } },
+  { id: 'm4', bizId: 'b16', cat: 'entertainment', kind: 'Activity', name: 'Bowling, per game', price: 250, priceNote: 'per person', fresh: FRESH.d5,
+    img: '1538511059256-46e76f13f071', imgs: ['1538511059256-46e76f13f071', '1545056453-f0359c3df6db'], avail: AV.walk, rating: 4.3, reviews: 96, tags: ['bowling', 'games', 'group', 'activity'],
+    attrs: { Lanes: '6', Shoes: 'Included', 'Group size': 'Up to 6 per lane', 'Peak hours': 'Fri–Sun after 6 pm' }, desc: 'Ten frames on a full-length lane. Bumpers available for children.' },
+  { id: 'm5', bizId: 'b16', cat: 'entertainment', kind: 'Activity', name: 'Arcade game card', price: 500, fresh: FRESH.d5,
+    img: '1550745165-9bc0b252726f', imgs: ['1550745165-9bc0b252726f', '1511882150382-421056c89033'], avail: AV.walk, rating: 4.1, reviews: 58, tags: ['arcade', 'games', 'kids', 'activity'],
+    attrs: { Credit: '₹500 of play', Validity: '90 days', Games: '40+ machines' }, desc: 'A rechargeable card for every machine on the floor. Unused credit stays on the card.' },
+  { id: 'rt11', bizId: 'b14', cat: 'entertainment', kind: 'Rental', sale: false, name: 'Private screening hall, 40 seats', price: 12000, fresh: FRESH.d5,
+    img: '1595769816263-9b910be24d5f', imgs: ['1595769816263-9b910be24d5f', '1574267432553-4b4628081c31'], avail: AV.rent, rating: 4.6, reviews: 11, tags: ['screening', 'party', 'birthday', 'rent', 'cinema', 'hall'],
+    attrs: { Seats: '40 recliners', Screen: '4K laser projection', Slot: 'Up to 3 hours' }, desc: 'Hire a small screen for a birthday, a team outing or a match screening. An operator runs the show.',
+    rent: { unit: 'day', rate: 12000, min: 1, deposit: 5000, fulfil: ['At the venue'], blocked: [0, 1, 7, 8],
+      includes: ['Projection and sound operator', 'One 3-hour slot'], terms: ['Content must be licensed or supplied by the cinema', 'Food and beverages are billed separately'], record: { rentals: 18, lastCheck: '12 Nov', checks: ['Projector and sound checked before each booking'] } } },
   // Rental-only listings — one or more in every category. The shop collects rent and deposit directly.
   { id: 'rt1', bizId: 'b2', cat: 'fashion', kind: 'Rental', sale: false, name: 'Navy three-piece suit on rent', price: 900, fresh: FRESH.d2,
     img: '1594938298603-c8148c4dae35', imgs: ['1594938298603-c8148c4dae35', '1507679799987-c73779587ccf'], variants: ['38', '40', '42', '44'], avail: AV.rent, rating: 4.5, reviews: 19, tags: ['suit', 'tuxedo', 'wedding', 'rent', 'menswear'],
@@ -294,19 +337,27 @@ export const PRODUCTS = [
 ]
 
 export const EVENTS = [
-  { id: 'ev1', bizId: 'b7', x: 0.9, y: 0.6, name: 'Sabarmati Sessions: Indie Night', type: 'Live music', date: 'Sat, 14 Nov', day: '14', mon: 'NOV', time: '7:30 pm – 10:30 pm',
+  { id: 'ev1', cat: 'events', bizId: 'b7', x: 0.9, y: 0.6, name: 'Sabarmati Sessions: Indie Night', type: 'Live music', date: 'Sat, 14 Nov', day: '14', mon: 'NOV', time: '7:30 pm – 10:30 pm',
     venue: 'The Courtyard, Navrangpura', area: 'nav', price: 499, priceLabel: '₹499 per person', img: '1470229722913-7c0e2dbbafd3',
     imgs: ['1470229722913-7c0e2dbbafd3', '1516450360452-9312f5e86fc7', '1493225457124-a3eb161ffa5f'],
     rules: ['Entry 16+', 'Standing event, limited seating', 'No outside food or drinks'], capacity: 'Capacity not published by organiser',
     desc: 'Three independent acts from Ahmedabad and Baroda, an open courtyard and a local food counter. Tickets are issued by the organiser over WhatsApp after payment.' },
-  { id: 'ev2', bizId: 'b7', x: -4.2, y: 0.2, name: 'Wheel & Clay: weekend pottery workshop', type: 'Workshop', date: 'Sun, 15 Nov', day: '15', mon: 'NOV', time: '10:00 am – 1:00 pm',
+  { id: 'ev2', cat: 'events', bizId: 'b7', x: -4.2, y: 0.2, name: 'Wheel & Clay: weekend pottery workshop', type: 'Workshop', date: 'Sun, 15 Nov', day: '15', mon: 'NOV', time: '10:00 am – 1:00 pm',
     venue: 'Studio Mitti, Bodakdev', area: 'bod', price: 1200, priceLabel: '₹1,200 incl. materials', img: '1565193566173-7a0ee3dbe261',
     imgs: ['1565193566173-7a0ee3dbe261'], rules: ['Ages 12+', 'Aprons provided', '12 seats per batch (organiser-stated)'], capacity: '12 seats per batch (organiser-stated)',
     desc: 'A beginner-friendly session on the wheel. You make two pieces; fired pieces can be collected after ten days.' },
-  { id: 'ev3', bizId: 'b7', x: 1.5, y: -0.5, name: 'Amdavad Street Food Carnival', type: 'Food festival', date: 'Fri–Sun, 20–22 Nov', day: '20', mon: 'NOV', time: '5:00 pm – 11:00 pm',
+  { id: 'ev3', cat: 'events', bizId: 'b7', x: 1.5, y: -0.5, name: 'Amdavad Street Food Carnival', type: 'Food festival', date: 'Fri–Sun, 20–22 Nov', day: '20', mon: 'NOV', time: '5:00 pm – 11:00 pm',
     venue: 'Riverfront Event Ground', area: 'nav', price: 99, priceLabel: '₹99 entry · food priced at stalls', img: '1555939594-58d7cb561ad1',
     imgs: ['1555939594-58d7cb561ad1', '1599487488170-d11ec9c172f0'], rules: ['All ages', 'Entry pass per person per day'], capacity: 'Open ground event',
     desc: 'Forty local stalls, live counters and a small stage. Entry passes are sold by the organiser; stall prices vary.' },
+  { id: 'ev4', cat: 'entertainment', bizId: 'b15', x: 0.9, y: -0.9, name: 'Ek Sanj Rangmanch Par — Gujarati play', type: 'Theatre', date: 'Sat, 21 Nov', day: '21', mon: 'NOV', time: '7:00 pm – 9:15 pm',
+    venue: 'Rangmanch Theatre, Ellisbridge', area: 'nav', price: 300, priceLabel: '₹300 – ₹600 by seating', img: '1503095396549-807759245b35',
+    imgs: ['1503095396549-807759245b35', '1507924538820-ede94a04019d'], rules: ['Ages 8+', 'Doors close at 7:00 pm', 'Photography not allowed'], capacity: '320 seats (venue-stated)',
+    desc: 'A two-act comedy about a joint family, a missing will and a very honest neighbour. Seats are issued by the theatre box office.' },
+  { id: 'ev5', cat: 'entertainment', bizId: 'b15', x: 0.9, y: -0.9, name: 'Open Mic Friday: stand-up night', type: 'Comedy', date: 'Fri, 20 Nov', day: '20', mon: 'NOV', time: '8:30 pm – 10:00 pm',
+    venue: 'Rangmanch Theatre, Ellisbridge', area: 'nav', price: 199, priceLabel: '₹199 per person', img: '1516280440614-37939bbacd81',
+    imgs: ['1516280440614-37939bbacd81'], rules: ['Ages 16+', 'Free seating', 'Performers register separately'], capacity: 'Studio hall, 90 seats (venue-stated)',
+    desc: 'Eight new comics, five minutes each, and one headliner. Hindi, Gujarati and English sets.' },
 ]
 
 export const OFFERS = [
@@ -328,6 +379,22 @@ export const OFFERS = [
     terms: ['Repairs and gas refill charged separately', 'Visit subject to technician availability'] },
 ]
 
+// Coupon offers: a discount code the business lists. Claiming reveals the code and creates a Lesho reference; it is never a ticket.
+OFFERS.push(
+  { id: 'o5', bizId: 'b14', title: '₹100 off a ticket on weekday shows', short: '₹100 off', valid: 'Mon–Thu, till 30 Nov 2026', products: ['m1', 'm2', 'm3'],
+    branch: 'Thaltej', min: 'Shows starting before 6:00 pm', limit: 'Up to 2 tickets per claim', code: 'GALAXY100', use: ['Box office', "Cinema's own booking page"],
+    steps: ['Claim to reveal the coupon code and your Lesho reference', "Buy your ticket at the box office or on the cinema's booking page", 'Show or enter the code — the cinema applies ₹100 off'],
+    terms: ['A coupon is a discount, not a ticket. Seats depend on availability at the cinema', 'Not valid on recliner seats or public holidays', 'One code per booking'] },
+  { id: 'o6', bizId: 'b16', title: 'Second bowling game free', short: '2nd game free', valid: 'Mon–Fri, till 15 Dec 2026', products: ['m4'],
+    branch: 'Bodakdev', min: 'One paid game per person', limit: 'Up to 6 people per claim', code: 'STRIKE2', use: ['At the counter'],
+    steps: ['Claim to reveal the coupon code and your Lesho reference', 'Show the code at the counter before your first game', 'The second game is added free'],
+    terms: ['Lanes are allotted on arrival; waiting time may apply', 'Not valid on weekends or public holidays'] },
+  { id: 'o7', bizId: 'b15', title: 'Students: 20% off balcony seats', short: '20% off', valid: 'All shows till 31 Dec 2026', products: [],
+    branch: 'Ellisbridge box office', min: 'Valid student ID', limit: 'One ticket per ID', code: 'RANG20', use: ['Box office'],
+    steps: ['Claim to reveal the coupon code and your Lesho reference', 'Show the code and your student ID at the box office', 'The theatre applies 20% off a balcony seat'],
+    terms: ['A coupon is a discount, not a ticket. Seats are issued by the box office', 'Not valid on premiere nights'] },
+)
+
 export const REVIEWS = [
   { id: 'rv1', target: { type: 'product', id: 'p1' }, bizId: 'b1', author: 'Nidhi P.', rating: 5, date: '2 Nov 2026', verified: 'purchase',
     text: 'Bought the magenta one for my cousin\'s wedding. The zari is not scratchy and the colour is exactly like the reel. They stitched the blouse in two days.',
@@ -345,6 +412,9 @@ export const REVIEWS = [
     text: 'Ghee roast is properly crisp. Gets crowded after 9 am on weekends, so go early.', imgs: ['1668236543090-82eba5ee5976'] },
   { id: 'rv7', target: { type: 'event', id: 'ev1' }, bizId: 'b7', author: 'Dev A.', rating: 5, date: '12 Oct 2026', verified: 'visit',
     text: 'Attended the October edition. Good sound, relaxed crowd, and it started on time.', imgs: ['1516450360452-9312f5e86fc7'] },
+  { id: 'rv9', target: { type: 'biz', id: 'b14' }, bizId: 'b14', author: 'Krupa M.', rating: 4, date: '9 Nov 2026', verified: 'visit',
+    text: 'Watched the 6:15 show. Clean hall and good sound. Used the weekday coupon at the box office without any fuss.', imgs: ['1517604931442-7e0c8ed2963c'],
+    reply: 'Thanks for coming, Krupa. See you at the movies! — Galaxy Cinemas' },
   { id: 'rv8', target: { type: 'product', id: 'h1' }, bizId: 'b10', author: 'Pooja R.', rating: 5, date: '18 Oct 2026', verified: 'purchase',
     text: 'Ordered the tan three-seater with a custom depth. Delivered in just under four weeks. Stitching is neat.', imgs: ['1540574163026-643ea20ade25'] },
 ]
@@ -363,6 +433,8 @@ export const POSTS = [
     img: '1516450360452-9312f5e86fc7', tags: [], eventId: 'ev1', likes: 623, dur: '0:20', cta: 'View event' },
   { id: 'r6', type: 'reel', bizId: 'b11', cat: 'auto', title: 'What a 25-point check covers', caption: 'Belts, brakes, fluids — what our technicians look at in a periodic service.',
     img: '1486262715619-67b85e0b08d3', tags: ['a1'], likes: 97, dur: '0:35', cta: 'View service' },
+  { id: 'r7', type: 'reel', bizId: 'b14', cat: 'entertainment', title: 'Trailer: Monsoon Signal', caption: 'Now showing in Hindi. Four shows a day on screens 1 and 3.',
+    img: '1585951237318-9ea5e175b891', tags: ['m1'], offerId: 'o5', likes: 344, dur: '0:30', cta: 'View showtimes' },
   { id: 'dp1', type: 'dump', bizId: 'b1', cat: 'fashion', title: 'Festive silk edit — five looks', caption: 'New arrivals for the wedding season. Tap a tag to see the piece.',
     img: '1610030469983-98e550d6193c', likes: 301,
     imgs: [
@@ -392,6 +464,8 @@ export const POSTS = [
     img: '1567337710282-00832b415979', tags: ['d3'], likes: 240, cta: 'View menu item' },
   { id: 'im3', type: 'image', bizId: 'b13', cat: 'services', title: 'Pre-winter AC service', caption: 'Coil clean, drain check and gas pressure check before you switch it off for the season.',
     img: '1621905251189-08b45d6a269e', tags: ['v1'], offerId: 'o4', likes: 58, cta: 'View service' },
+  { id: 'im4', type: 'image', bizId: 'b16', cat: 'entertainment', title: 'Friday league night', caption: 'Teams of four, three games each. Walk in from 7 pm.',
+    img: '1545056453-f0359c3df6db', tags: ['m4'], offerId: 'o6', likes: 91, cta: 'View activity' },
   { id: 'up1', type: 'update', bizId: 'b8', cat: 'beauty', title: 'New Sunday hours', caption: 'From 15 Nov the studio opens at 9:00 am on Sundays. Tuesdays remain closed.',
     img: '1560066984-138dadb4c035', tags: [], likes: 31, cta: 'View studio' },
   { id: 'pv1', type: 'review', bizId: 'b1', cat: 'fashion', reviewId: 'rv1', title: 'Customer review', img: '1619516388835-2b60acc4049e', tags: ['p1'], likes: 64, cta: 'View product' },
@@ -500,6 +574,10 @@ export const STORIES = [
     { img: '1540574163026-643ea20ade25', text: 'Sienna in tan leather, on the showroom floor', time: '7h ago', link: { type: 'product', id: 'h1' } },
     { img: '1586023492125-27b2c045efd7', text: 'Marigold accent chair, ready to take home', time: '7h ago', link: { type: 'product', id: 'h3' } },
   ] },
+  { bizId: 'b14', items: [
+    { img: '1505686994434-e3cc5abf1330', text: 'Tonight: Monsoon Signal at 6:15 and 9:30 pm', time: '1h ago', link: { type: 'product', id: 'm1' } },
+    { img: '1574267432553-4b4628081c31', text: 'Weekday coupon: ₹100 off shows before 6 pm', time: '3h ago', link: { type: 'offer', id: 'o5' } },
+  ] },
   { bizId: 'b12', items: [
     { img: '1517836357463-d25dfeac3438', text: '6 am strength class — trial slots open this week', time: '9h ago', link: { type: 'product', id: 'f2' } },
   ] },
@@ -579,6 +657,7 @@ export const AUTO_REPLY = {
   APT: 'Thanks! We\'ll check the calendar and confirm your slot here shortly.',
   EVT: 'Thanks for your interest. We\'ll share availability and payment steps here.',
   RNT: 'Thanks for the rental request. We\'ll check the dates and confirm here shortly.',
+  ENT: 'Thanks for asking. We\'ll reply here with showtimes and how to book with us.',
   OFR: 'Your claim is noted. Show the reference at the counter and we\'ll apply the offer.',
   any: 'Thanks for your message. Someone from the team will reply here shortly.',
   next: 'Got it — we\'ll get back to you on this today.',

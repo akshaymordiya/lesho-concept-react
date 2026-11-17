@@ -369,7 +369,7 @@ const TYPES = [
 export function MCreate() {
   const app = useApp()
   const [type, setType] = useState(null)
-  const [d, setD] = useState({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '' })
+  const [d, setD] = useState({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '', code: '' })
   const [tried, setTried] = useState(false)
   const [done, setDone] = useState(null)
   const composing = !!type && type !== 'product' && type !== 'rental' && !done
@@ -386,7 +386,7 @@ export function MCreate() {
     valid: type === 'offer' && !d.valid.trim(),
     date: type === 'event' && (!d.date.trim() || !d.venue.trim()),
   }
-  const start = (id) => { setType(id); setTried(false); setDone(null); setD({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '' }) }
+  const start = (id) => { setType(id); setTried(false); setDone(null); setD({ title: '', caption: '', media: [], links: [], valid: '', terms: '', date: '', venue: '', price: '', code: '' }) }
   const pickMedia = (m) => setD((x) => ({ ...x, media: multi ? (x.media.includes(m) ? x.media.filter((y) => y !== m) : [...x.media, m]) : [m] }))
   const pickLink = (id) => setD((x) => ({ ...x, links: x.links.includes(id) ? x.links.filter((y) => y !== id) : [...x.links, id] }))
 
@@ -395,7 +395,7 @@ export function MCreate() {
     if (Object.values(bad).some(Boolean)) { app.toast('Please complete the highlighted fields'); return }
     const id = `${type}-${Date.now()}`
     if (type === 'offer') {
-      app.addOffer({ id, bizId: ME, title: d.title.trim(), short: 'New offer', valid: d.valid.trim(), products: d.links, branch: 'CG Road branch', min: 'See terms', limit: 'One per customer',
+      app.addOffer({ id, bizId: ME, title: d.title.trim(), short: 'New offer', valid: d.valid.trim(), products: d.links, branch: 'CG Road branch', min: 'See terms', limit: 'One per customer', ...(d.code.trim() ? { code: d.code.trim().toUpperCase(), use: ['At the store'] } : {}),
         steps: ['Claim the offer to get a Lesho reference', 'Show the reference at the billing counter', 'The store checks the code and applies the offer'], terms: (d.terms.trim() || 'Standard store terms apply').split('\n').filter(Boolean) })
       setDone({ go: ['offer', id], label: 'offer' })
     } else if (type === 'story') {
@@ -478,6 +478,11 @@ export function MCreate() {
             <label className="field" style={{ marginTop: 12 }}><span className="lbl">Validity</span>
               <input className={`input ${tried && bad.valid ? 'err' : ''}`} value={d.valid} onChange={(e) => setD({ ...d, valid: e.target.value })} placeholder="e.g. Valid till 15 Dec 2026" />
               {tried && bad.valid && <Err>Offers need a validity so customers know when they end.</Err>}</label>
+          )}
+          {type === 'offer' && (
+            <label className="field" style={{ marginTop: 12 }}><span className="lbl">Coupon code (optional)</span>
+              <input className="input" value={d.code} onChange={(e) => setD({ ...d, code: e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toUpperCase() })} placeholder="e.g. SILK500" aria-label="Coupon code" />
+              <span className="tiny muted" style={{ display: 'block', marginTop: 6 }}>Customers see the code only after they claim. Each claim still gets its own Lesho reference so you can count redemptions.</span></label>
           )}
           {type === 'event' && (
             <>
